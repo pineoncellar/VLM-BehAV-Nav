@@ -1,43 +1,101 @@
 import cv2
+import math
+import os
+import datetime
+import logging
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, PointCloud2
+from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge, CvBridgeError
 
 # Import algorithms
 from instruction_processor import get_instruction_breakdown, extract_lists_from_dict, get_similarity_scores, calculate_input_action_costs, get_ith_key_list
 from landmark_vision import LandmarkDetectorCore
 
+def setup_file_logger():
+    log_dir = "log"
+    os.makedirs(log_dir, exist_ok=True)
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file = os.path.join(log_dir, f"run_{timestamp}.log")
+    
+    file_logger = logging.getLogger("behav_file_logger")
+    file_logger.setLevel(logging.INFO)
+    if not file_logger.handlers:
+        fh = logging.FileHandler(log_file)
+        fh.setFormatter(logging.Formatter('[%(asctime)s] [%(levelname)s]: %(message)s'))
+        file_logger.addHandler(fh)
+    return file_logger
+
+class DualLogger:
+    def __init__(self, ros_logger, file_logger):
+        self.ros_logger = ros_logger
+        self.file_logger = file_logger
+        
+    def info(self, msg):
+        self.ros_logger.info(msg)
+        self.file_logger.info(msg)
+        
+    def error(self, msg):
+        self.ros_logger.error(msg)
+        self.file_logger.error(msg)
+        
+    def warn(self, msg):
+        self.ros_logger.warn(msg)
+        self.file_logger.warning(msg)
+
 class LandmarkDetectorNode(Node):
     def __init__(self):
         super().__init__('landmark_detector_node')
-        self.get_logger().info('Started landmark_detector_node')
+        
+        self.file_logger = setup_file_logger()
+        self.dual_logger = DualLogger(self.get_logger(), self.file_logger)
+        
+        self.dual_logger.info('Started landmark_detector_node')
 
-        # Initialize the algorithm logic instance and inject ROS logger
-        self.detector_core = LandmarkDetectorCore(logger=self.get_logger())
+        # Initialize the algorithm logic instance and inject dual logger
+        self.detector_core = LandmarkDetectorCore(logger=self.dual_logger)
         
         # Override some properties if needed
         self.image_topic = "/camera_sensor/image_raw"
+        self.lidar_topic = "/velodyne_points"
+        self.cmd_topic = "/cmd_vel"   # Or /ackermann_steering_controller/reference based on multiplexer
         self.period_sec = 10.0
+        self.control_period_sec = 0.1 # 10 Hz for control loop
 
         # ========= ROS =========
         self.bridge = CvBridge()
+        
+        # 1. Perception Interfaces
         self.image_sub = self.create_subscription(
             Image,
             self.image_topic,
             self.image_callback,
             1
         )
+        self.lidar_sub = self.create_subscription(
+            PointCloud2,
+            self.lidar_topic,
+            self.lidar_callback,
+            1
+        )
+        
+        # 2. Control Interface (Ackermann Steering Output)
+        self.cmd_pub = self.create_publisher(Twist, self.cmd_topic, 10)
+
+        # 3. Timers
         self.timer = self.create_timer(self.period_sec, self.timer_callback)
+        self.control_timer = self.create_timer(self.control_period_sec, self.control_loop)
         
         self.latest_image = None
+        self.latest_pointcloud = None
         self.is_processing = False
 
     def image_callback(self, msg: Image):
-        self.get_logger().info('Received an image message')
+        self.dual_logger.info('Received an image message')
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
-            self.get_logger().info(f"Image converted successfully, shape: {cv_image.shape}")
+            self.dual_logger.info(f"Image converted successfully, shape: {cv_image.shape}")
             if msg.encoding == 'rgb8':
                 cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
             elif msg.encoding == 'bgr8':
@@ -46,22 +104,60 @@ class LandmarkDetectorNode(Node):
                 cv_image = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
             self.latest_image = cv_image
         except CvBridgeError as e:
-            self.get_logger().error(f'cv_bridge error: {str(e)}')
+            self.dual_logger.error(f'cv_bridge error: {str(e)}')
+
+    def lidar_callback(self, msg: PointCloud2):
+        # Store for obstacle avoidance algorithms
+        self.latest_pointcloud = msg
 
     def timer_callback(self):
         if self.latest_image is None or self.is_processing:
-            self.get_logger().info("No image or already processing...")
+            self.dual_logger.info("No image or already processing...")
             return
 
-        self.get_logger().info("Starting image processing...")
+        self.dual_logger.info("Starting image processing...")
         self.is_processing = True
         try:
             # Delegate to the core logic layer
             self.detector_core.process_image(self.latest_image.copy())
         except Exception as e:
-            self.get_logger().error(f'process_image failed: {str(e)}')
+            self.dual_logger.error(f'process_image failed: {str(e)}')
         finally:
             self.is_processing = False
+
+    def control_loop(self):
+        """
+        闭环控制接口：读取 detector_core 分析得到的目标方位，
+        下发给 ackermann_steering 相关的速度 / 转向指令
+        """
+        msg = Twist()
+        meas = self.detector_core.latest_measurement
+
+        if meas is None:
+            # 若没找到地标，车辆停止
+            msg.linear.x = 0.0
+            msg.angular.z = 0.0
+        else:
+            distance_m, bearing_deg = meas
+            
+            # 使用简单的 P 控制器追踪地标方位
+            kp_v = 0.3
+            kp_w = 0.01
+            
+            max_v = 1.0  # 基础最高前进速度
+            max_w = 0.5  # 基础最高转向角速度
+
+            # 距离防碰撞阈值 (可结合 Lidar 测量进一步增强)
+            if distance_m > 3.0: 
+                msg.linear.x = min(distance_m * kp_v, max_v)
+            else:
+                msg.linear.x = 0.0 # 距离极近时停下
+                
+            # 根据特征点偏移角控制转向。右偏（正号）对应负角速度
+            target_w = -bearing_deg * kp_w
+            msg.angular.z = max(min(target_w, max_w), -max_w)
+            
+        self.cmd_pub.publish(msg)
 
 def run_instruction_pipeline():
     print("Running initial instruction reasoning...")

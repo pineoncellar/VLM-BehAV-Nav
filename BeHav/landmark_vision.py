@@ -68,6 +68,7 @@ class LandmarkDetectorCore:
 
         self.max_retries = 3
         self.delay = 5
+        self.latest_measurement = None
 
         # ROS 订阅和定时器 (Moved to interface node)
         # self.bridge = CvBridge()
@@ -347,7 +348,8 @@ class LandmarkDetectorCore:
 
         parsed = self.parse_vlm_response(response_text)
         if not parsed.get("visible"):
-            if self.logger: self.logger.error(f"Target {target_text} not visible or invalid response")
+            if self.logger: 
+                self.logger.error(f"Target '{target_text}' not visible or invalid response. Raw VLM response: {response_text}")
             return
 
         if self.logger: self.logger.info(f"Target bbox: {parsed['x_min']}, {parsed['y_min']}, {parsed['x_max']}, {parsed['y_max']}")  # 打印bounding box
