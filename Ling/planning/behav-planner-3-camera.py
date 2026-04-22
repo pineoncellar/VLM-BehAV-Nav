@@ -309,15 +309,13 @@ class BehAV_Planner(Node):
         self.odom_condition = Condition()
         self.odom_msg = None
 
-        self.sub_odom = self.create_subscription(Odometry, '/lio_sam/mapping/odometry', self.assignOdomCoords,self.qos_profile)
+        self.sub_odom = self.create_subscription(Odometry, '/odom', self.assignOdomCoords,self.qos_profile)
 
         self.sub_pointcloud = self.create_subscription(
             PointCloud2,
-            '/lio_sam/mapping/cloud_registered',   # 这里改成你的点云topic
+            '/velodyne_points',   # 使用新仿真的原始雷达点云，也可以改用 /camera_sensor/points
             self.pointcloud_callback,
             self.qos_profile
-        
-        
         )
 
 
@@ -349,7 +347,7 @@ class BehAV_Planner(Node):
         self.enable_clipseg = True   # True 开启，False 关闭
 
         if self.enable_clipseg:
-            self.subscription = self.create_subscription(Image, '/color/image_raw', self.image_callback, 10)
+            self.subscription = self.create_subscription(Image, '/camera_sensor/image_raw', self.image_callback, 10)
             self.behav_costmap_publisher = self.create_publisher(Image, '/behav_costmap', 10)
             self.traj_image_pub = self.create_publisher(Image, '/traj_marked_image', 10)
         else:
