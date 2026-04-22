@@ -1,6 +1,0 @@
-Invoking command in '/home/zyy/robot_yang/build/velodyne_gazebo_plugins': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/zyy/robot_yang/src/velodyne_simulator/velodyne_gazebo_plugins -DCMAKE_INSTALL_PREFIX=/home/zyy/robot_yang/install/velodyne_gazebo_plugins
-Invoked command in '/home/zyy/robot_yang/build/velodyne_gazebo_plugins' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/zyy/robot_yang/src/velodyne_simulator/velodyne_gazebo_plugins -DCMAKE_INSTALL_PREFIX=/home/zyy/robot_yang/install/velodyne_gazebo_plugins
-Invoking command in '/home/zyy/robot_yang/build/velodyne_gazebo_plugins': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/zyy/robot_yang/build/velodyne_gazebo_plugins -- -j16 -l16
-Invoked command in '/home/zyy/robot_yang/build/velodyne_gazebo_plugins' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/zyy/robot_yang/build/velodyne_gazebo_plugins -- -j16 -l16
-Invoking command in '/home/zyy/robot_yang/build/velodyne_gazebo_plugins': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/zyy/robot_yang/build/velodyne_gazebo_plugins
-Invoked command in '/home/zyy/robot_yang/build/velodyne_gazebo_plugins' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/zyy/robot_yang/build/velodyne_gazebo_plugins

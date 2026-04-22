@@ -1,9 +1,0 @@
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/uninstall.dir
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/velodyne_simulator_uninstall.dir
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/test.dir
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/edit_cache.dir
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/rebuild_cache.dir
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/list_install_components.dir
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/install.dir
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/install/local.dir
-/home/zyy/robot_yang/build/velodyne_simulator/CMakeFiles/install/strip.dir

@@ -1,9 +1,0 @@
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/uninstall.dir
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/carlike_robot_description_uninstall.dir
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/test.dir
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/edit_cache.dir
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/rebuild_cache.dir
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/list_install_components.dir
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/install.dir
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/install/local.dir
-/home/zyy/robot_yang/build/carlike_robot_description/CMakeFiles/install/strip.dir
