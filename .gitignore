@@ -1,3 +1,9 @@
 **/log/
 **/build/
 **/install/
+
+**/__pycache__/
+
+# 生成文件
+BeHav/Image_plots
+BeHav/landmark_data.json
