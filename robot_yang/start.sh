@@ -1,6 +1,9 @@
 #!/bin/bash
 source install/setup.bash
 
+# 删除残留的 Gazebo 进程，确保仿真环境干净
+killall -9 gzserver gzclient
+
 # 获取当前的显示端口，确保窗口能弹出到你的 RDP 界面
 export DISPLAY=:11.0  # 如果你的端口不是10，请根据 echo $DISPLAY 的结果修改
 
