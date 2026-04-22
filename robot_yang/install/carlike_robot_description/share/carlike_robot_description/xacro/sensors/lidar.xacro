@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="lidar">
+
+    <xacro:macro name="lidar" params="prefix:=laser">
+        <!-- Create laser reference frame -->
+        <link name="${prefix}_link">
+            <inertial>
+                <mass value="0.001" />
+                <origin xyz="0 0 0" />
+                <inertia ixx="0.001" ixy="0.0" ixz="0.0"
+                         iyy="0.001" iyz="0.0"
+                         izz="0.001" />
+            </inertial>
+
+            <visual>
+                <origin xyz=" 0 0 0 " rpy="0 0 0" />
+                <geometry>
+                    <cylinder length="0.05" radius="0.05"/>
+                </geometry>
+                <material name="tire_mat">
+                    <color rgba="0.0 0.0 0.0 0.8" />
+                </material>
+            </visual>
+
+            <collision>
+                <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+                <geometry>
+                    <cylinder length="0.06" radius="0.05"/>
+                </geometry>
+            </collision>
+        </link>
+        <gazebo reference="${prefix}_link">
+            <material>Gazebo/Black</material>
+        </gazebo>
+
+        <gazebo reference="${prefix}_link">
+            <sensor name="laserscan" type="ray">
+                <plugin name="laserscan" filename="libgazebo_ros_ray_sensor.so">
+                    <ros>
+                        <namespace>/</namespace>
+                        <remapping>~/out:=scan</remapping>
+                    </ros>
+                    <output_type>sensor_msgs/LaserScan</output_type>
+                    <frame_name>laser_link</frame_name>
+                </plugin>
+                <always_on>true</always_on>
+                <visualize>false</visualize>
+                <update_rate>5</update_rate>
+                <pose>0 0 0 0 0 0</pose>
+                <!-- 激光传感器配置 -->
+                <ray>
+                    <!-- 设置扫描范围 -->
+                    <scan>
+                        <horizontal>
+                            <samples>360</samples>
+                            <resolution>1.000000</resolution>
+                            <min_angle>0.000000</min_angle>
+                            <max_angle>6.280000</max_angle>
+                        </horizontal>
+                    </scan>
+                    <!-- 设置扫描距离 -->
+                    <range>
+                        <min>0.120000</min>
+                        <max>8.0</max>
+                        <resolution>0.015000</resolution>
+                    </range>
+                    <!-- 设置噪声 -->
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>0.0</mean>
+                        <stddev>0.01</stddev>
+                    </noise>
+                </ray>
+            </sensor>
+        </gazebo>
+
+    </xacro:macro>
+    <xacro:lidar prefix="laser"/>
+
+    <!-- 激光雷达关节 -->
+    <joint name="lidar_joint" type="fixed">
+      <origin xyz="0 0 0.2475" rpy="0 0 0" />
+      <parent link="frame1"/>
+      <child link="laser_link"/>
+    </joint>
+
+</robot>

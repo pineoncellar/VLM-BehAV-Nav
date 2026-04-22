@@ -1,0 +1,6 @@
+Invoking command in '/home/zyy/robot_yang/build/carlike_robot_description': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/zyy/robot_yang/src/carlike_robot_description -DCMAKE_INSTALL_PREFIX=/home/zyy/robot_yang/install/carlike_robot_description
+Invoked command in '/home/zyy/robot_yang/build/carlike_robot_description' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/zyy/robot_yang/src/carlike_robot_description -DCMAKE_INSTALL_PREFIX=/home/zyy/robot_yang/install/carlike_robot_description
+Invoking command in '/home/zyy/robot_yang/build/carlike_robot_description': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/zyy/robot_yang/build/carlike_robot_description -- -j16 -l16
+Invoked command in '/home/zyy/robot_yang/build/carlike_robot_description' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/zyy/robot_yang/build/carlike_robot_description -- -j16 -l16
+Invoking command in '/home/zyy/robot_yang/build/carlike_robot_description': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/zyy/robot_yang/build/carlike_robot_description
+Invoked command in '/home/zyy/robot_yang/build/carlike_robot_description' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/zyy/robot_yang/build/carlike_robot_description

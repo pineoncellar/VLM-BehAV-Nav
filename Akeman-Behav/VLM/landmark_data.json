@@ -1,0 +1,15 @@
+{
+    "landmarks": [
+        "red car"
+    ],
+    "navigation_actions": [
+        "walk",
+        "stop"
+    ],
+    "behavioral_actions": [
+        "stop in front of"
+    ],
+    "behavioral_targets": [
+        "red car"
+    ]
+}
