@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 client = OpenAI(
-    api_key=os.getenv("DASHSCOPE_API_KEY"),
-    base_url=os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+    api_key=os.getenv("LLM_API_KEY"),
+    base_url=os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 )
 
 def get_instruction_breakdown(language_instruction):
@@ -26,7 +26,7 @@ def get_instruction_breakdown(language_instruction):
     '''
 
     response = client.chat.completions.create(
-        model="qwen-plus",
+        model=os.getenv("LLM_TEXT_MODEL", "qwen-plus"),
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -149,7 +149,7 @@ def get_similarity_scores(input_actions, reference_list):
     The input actions are {input_actions}
     """
 
-    response = client.chat.completions.create(model="qwen-plus",
+    response = client.chat.completions.create(model=os.getenv("LLM_TEXT_MODEL", "qwen-plus"),
     messages=[
           {"role": "user", "content": prompt}
       ])
