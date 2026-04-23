@@ -12,6 +12,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+if "/chat/completions" in LLM_BASE_URL:
+    LLM_BASE_URL = LLM_BASE_URL.replace("/chat/completions", "")
+
 client = OpenAI(
     api_key=os.getenv("LLM_API_KEY"),
     base_url=os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
