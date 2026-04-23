@@ -7,3 +7,4 @@
 # 生成文件
 BeHav/Image_plots
 BeHav/landmark_data.json
+BeHav/.env

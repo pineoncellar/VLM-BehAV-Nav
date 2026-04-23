@@ -13,7 +13,10 @@ import cv2
 import matplotlib.pyplot as plt
 
 from PIL import Image as PILImage
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class LandmarkDetectorCore:
     def __init__(self, logger=None):
@@ -26,10 +29,10 @@ class LandmarkDetectorCore:
         self.navigation_landmarks = self.load_landmarks_from_file("landmark_data.json")
 
 
-        # ========= 固定配置：不从外部接收任务信息 =========
-        self.api_key = "sk-e9d7e3da6d6240cd97b4d61af040415d"   # 在这里填你的 DashScope API Key
-        self.vlm_model = "qwen3-vl-plus"
-        self.vlm_base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+        # ========= 从 .env 环境变量读取配置 =========
+        self.api_key = os.getenv("DASHSCOPE_API_KEY", "sk-e9d7e3da6d6240cd97b4d61af040415d")
+        self.vlm_model = os.getenv("DASHSCOPE_VLM_MODEL", "qwen3-vl-plus")
+        self.vlm_base_url = os.getenv("DASHSCOPE_VLF_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
 
         # 固定导航目标列表：按顺序执行
         # self.navigation_landmarks = ["traffic barrier", "library"]

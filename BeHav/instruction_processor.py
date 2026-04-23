@@ -7,11 +7,15 @@ from openai import OpenAI
 import numpy as np
 import ast
 import json
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = OpenAI(
-    api_key='sk-e9d7e3da6d6240cd97b4d61af040415d',  # ADD YOUR API KEY HERE
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-) #ADD YOUR API KEY HERE
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    base_url=os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+)
 
 def get_instruction_breakdown(language_instruction):
     prompt = f'''
