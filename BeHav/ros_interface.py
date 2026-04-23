@@ -7,11 +7,14 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, PointCloud2
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 
 # Import algorithms
 from instruction_processor import get_instruction_breakdown, extract_lists_from_dict, get_similarity_scores, calculate_input_action_costs, get_ith_key_list
 from landmark_vision import LandmarkDetectorCore
+from behav_planner import BehavPlannerCore
+
 
 def setup_file_logger():
     log_dir = "log"
@@ -55,10 +58,17 @@ class LandmarkDetectorNode(Node):
 
         # Initialize the algorithm logic instance and inject dual logger
         self.detector_core = LandmarkDetectorCore(logger=self.dual_logger)
+        self.behav_planner = BehavPlannerCore(
+            logger=self.dual_logger, 
+            goal_radius=2.5, 
+            goal_theta=0.0, 
+            goal_delta=0.0
+        )
         
         # Override some properties if needed
         self.image_topic = "/camera_sensor/image_raw"
         self.lidar_topic = "/velodyne_points"
+        self.odom_topic = "/odom"
         self.cmd_topic = "/cmd_vel"   # Or /ackermann_steering_controller/reference based on multiplexer
         self.period_sec = 10.0
         self.control_period_sec = 0.1 # 10 Hz for control loop
@@ -79,9 +89,21 @@ class LandmarkDetectorNode(Node):
             self.lidar_callback,
             1
         )
+        self.odom_sub = self.create_subscription(
+            Odometry,
+            self.odom_topic,
+            self.odom_callback,
+            1
+        )
         
         # 2. Control Interface (Ackermann Steering Output)
         self.cmd_pub = self.create_publisher(Twist, self.cmd_topic, 10)
+        self.behav_costmap_pub = self.create_publisher(Image, '/behav_costmap', 10)
+        self.traj_image_pub = self.create_publisher(Image, '/traj_marked_image', 10)
+
+        # Connect publishers conceptually to BehavPlannerCore callbacks
+        self.behav_planner.on_behav_costmap = lambda m: self.behav_costmap_pub.publish(m)
+        self.behav_planner.on_traj_image = lambda m: self.traj_image_pub.publish(m)
 
         # 3. Timers
         self.timer = self.create_timer(self.period_sec, self.timer_callback)
@@ -93,6 +115,10 @@ class LandmarkDetectorNode(Node):
 
     def image_callback(self, msg: Image):
         self.dual_logger.info('Received an image message')
+        
+        # pass raw ros message to behav_planner
+        self.behav_planner.process_image(msg)
+        
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
             self.dual_logger.info(f"Image converted successfully, shape: {cv_image.shape}")
@@ -109,6 +135,10 @@ class LandmarkDetectorNode(Node):
     def lidar_callback(self, msg: PointCloud2):
         # Store for obstacle avoidance algorithms
         self.latest_pointcloud = msg
+        self.behav_planner.process_pointcloud(msg)
+
+    def odom_callback(self, msg: Odometry):
+        self.behav_planner.process_odom(msg)
 
     def timer_callback(self):
         if self.latest_image is None or self.is_processing:
@@ -127,35 +157,16 @@ class LandmarkDetectorNode(Node):
 
     def control_loop(self):
         """
-        闭环控制接口：读取 detector_core 分析得到的目标方位，
-        下发给 ackermann_steering 相关的速度 / 转向指令
+        闭环控制接口：读取 detector_core 和 behav_planner
         """
-        msg = Twist()
+        # 可以直接采用 behav_planner 生成的最优命令
+        msg = self.behav_planner.compute_velocity()
+        
+        # （原有基于 Vision 的 P 控制已作为备用参考，或者组合使用）
         meas = self.detector_core.latest_measurement
-
-        if meas is None:
-            # 若没找到地标，车辆停止
-            msg.linear.x = 0.0
-            msg.angular.z = 0.0
-        else:
+        if meas is not None:
             distance_m, bearing_deg = meas
-            
-            # 使用简单的 P 控制器追踪地标方位
-            kp_v = 0.3
-            kp_w = 0.01
-            
-            max_v = 1.0  # 基础最高前进速度
-            max_w = 0.5  # 基础最高转向角速度
-
-            # 距离防碰撞阈值 (可结合 Lidar 测量进一步增强)
-            if distance_m > 3.0: 
-                msg.linear.x = min(distance_m * kp_v, max_v)
-            else:
-                msg.linear.x = 0.0 # 距离极近时停下
-                
-            # 根据特征点偏移角控制转向。右偏（正号）对应负角速度
-            target_w = -bearing_deg * kp_w
-            msg.angular.z = max(min(target_w, max_w), -max_w)
+            # 例如：当有目标时可覆盖或引入 behav 逻辑
             
         self.cmd_pub.publish(msg)
 
