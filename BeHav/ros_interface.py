@@ -56,6 +56,20 @@ class LandmarkDetectorNode(Node):
         # Initialize the algorithm pipeline logic
         self.pipeline = BehavMainPipeline(logger=self.dual_logger)
         
+        self.declare_parameter('instruction', 'Walk to the red car and stop in front of it')
+        instruction = self.get_parameter('instruction').value
+        
+        print("\n" + "="*50)
+        print("    欢迎使用 VLM-BehAV-Nav 导航系统")
+        print("="*50)
+        user_input = input(">>> 请输入您的自然语言导航指令\n(直接回车将使用默认指令): ").strip()
+        if user_input:
+            instruction = user_input
+        print(f"\n[系统] 正在处理指令: {instruction}\n")
+        
+        self.dual_logger.info(f"Using instruction: {instruction}")
+        self.pipeline.run_instruction_reasoning(instruction)
+        
         # Override some properties if needed
         self.image_topic = "/camera_sensor/image_raw"
         self.lidar_topic = "/velodyne_points"
@@ -149,6 +163,7 @@ class LandmarkDetectorNode(Node):
         """
         msg = self.pipeline.compute_control_command()
         self.cmd_pub.publish(msg)
+        self.dual_logger.info(f"==> [ros_interface] Publishing CMD: {msg.linear.x}, {msg.angular.z}")
 
 def run_instruction_pipeline():
     print("Running initial instruction reasoning...")

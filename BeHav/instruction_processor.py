@@ -18,7 +18,7 @@ if "/chat/completions" in LLM_BASE_URL:
 
 client = OpenAI(
     api_key=os.getenv("LLM_API_KEY"),
-    base_url=os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+    base_url=LLM_BASE_URL
 )
 
 def get_instruction_breakdown(language_instruction):
@@ -111,6 +111,11 @@ def get_instruction_breakdown(language_instruction):
 
     with open("landmark_data.json", "w", encoding="utf-8") as f:
         json.dump(normalized, f, indent=4, ensure_ascii=False)
+    
+    # 如果内容是空的（解析失败），则打印原始字符串以供调试
+    if all(len(v) == 0 for v in normalized.values()):
+        print("Warning: Parsed breakdown is empty. Original model output:")
+        print(instruction_breakdown_str)
 
     return normalized
 
@@ -139,6 +144,9 @@ def get_ith_key_list(dictionary, key_idx):
 
 def get_similarity_scores(input_actions, reference_list):
 
+    if input_actions is None or len(input_actions) == 0:
+        return np.array([])
+        
     reference_list_length = len(reference_list)
     input_actions_length = len(input_actions)
 
@@ -205,7 +213,14 @@ def get_similarity_scores(input_actions, reference_list):
     return similarity_scores_array
 
 def calculate_input_action_costs(similarity_scores, reference_costs):
+    if similarity_scores is None or len(similarity_scores) == 0:
+        return []
+        
     # Find the index of the highest similarity score for each input action
+    if len(similarity_scores.shape) == 1:
+        # Just in case it's a 1D array instead of 2D
+        similarity_scores = np.expand_dims(similarity_scores, axis=0)
+        
     most_similar_indices = np.argmax(similarity_scores, axis=1)
 
     # print(most_similar_indices)

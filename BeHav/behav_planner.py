@@ -303,6 +303,9 @@ class BehavPlannerCore:
     def process_image(self, msg):
         if not self.enable_clipseg:
             return
+        if not self.prompts:
+            return
+        
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8')
             self.img_h, self.img_w, _ = cv_image.shape

@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 from instruction_processor import get_instruction_breakdown, extract_lists_from_dict, get_similarity_scores, calculate_input_action_costs, get_ith_key_list
 from landmark_vision import LandmarkDetectorCore
 from behav_planner import BehavPlannerCore
@@ -58,9 +59,19 @@ class BehavMainPipeline:
         similarity_scores = get_similarity_scores(behavioral_action_list, reference_list)
         input_action_costs = calculate_input_action_costs(similarity_scores, reference_costs)
 
-        # 这里可以将 target 和 cost 下发给 behav_planner 的 clipseg 提示词更新
-        # self.behav_planner.prompts = behavioral_target_list
-        # self.behav_planner.cost_values = input_action_costs
+        # Convert numpy arrays back to regular Python lists to avoid HuggingFace strict type checking errors
+        if isinstance(behavioral_target_list, np.ndarray):
+            behavioral_target_list = behavioral_target_list.tolist()
+        if isinstance(landmark_list, np.ndarray):
+            landmark_list = landmark_list.tolist()
+        if isinstance(navigation_action_list, np.ndarray):
+            navigation_action_list = navigation_action_list.tolist()
+
+        self.behav_planner.prompts = behavioral_target_list or []
+        self.behav_planner.cost_values = input_action_costs or []
+
+        self.detector_core.navigation_landmarks = landmark_list or []
+        self.detector_core.navigation_actions = navigation_action_list or []
 
     def process_vision_cv2(self, cv_image):
         """
@@ -91,6 +102,12 @@ class BehavMainPipeline:
         meas = self.detector_core.latest_measurement
         if meas is not None:
             distance_m, bearing_deg = meas
-            # 作为占位演示：未来可以在这里融合视觉追踪控制器（如目标近距离减速）
+            # 如果地标在视野内，将其作为局部目标传递给 planner
+            self.behav_planner.goal_radius = distance_m
+            self.behav_planner.goal_theta = bearing_deg
+            self.behav_planner.received_final_goal_odom = False # 强制重新计算以车辆中心为基准的新目标点
+            if distance_m < 1.0: # 如果距离目标极近，可直接发送停止指令或大幅降低速度
+                cmd_msg.linear.x *= 0.5
+                cmd_msg.angular.z *= 0.5
 
         return cmd_msg
