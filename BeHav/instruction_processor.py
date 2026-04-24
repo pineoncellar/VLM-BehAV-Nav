@@ -108,9 +108,6 @@ def get_instruction_breakdown(language_instruction):
                 if isinstance(value, list):
                     normalized[target_key] = value
                     break
-
-    with open("landmark_data.json", "w", encoding="utf-8") as f:
-        json.dump(normalized, f, indent=4, ensure_ascii=False)
     
     # 如果内容是空的（解析失败），则打印原始字符串以供调试
     if all(len(v) == 0 for v in normalized.values()):

@@ -25,9 +25,7 @@ class LandmarkDetectorCore:
             self.logger.info('Initialized LandmarkDetectorCore logic')
 
 
-        # ========= 读取地标数据 =========
-        self.navigation_landmarks = self.load_landmarks_from_file("landmark_data.json")
-
+        self.navigation_landmarks = []
 
         # ========= 从 .env 环境变量读取配置 =========
         self.api_key = os.getenv("LLM_API_KEY", "sk-e9d7e3da6d6240cd97b4d61af040415d")
@@ -77,19 +75,6 @@ class LandmarkDetectorCore:
         # self.bridge = CvBridge()
         # self.image_sub = ...
         # self.timer = ...
-
-    def load_landmarks_from_file(self, file_path):
-        """ 从文件中读取地标数据，确保只提取 'landmarks' 部分 """
-        try:
-            if self.logger: self.logger.info(f"Loading landmarks from {file_path}")  # 打印日志
-            with open(file_path, "r") as f:
-                data = json.load(f)
-                landmarks = data.get("landmarks", [])
-                if self.logger: self.logger.info(f"Loaded landmarks: {landmarks}")  # 打印读取的地标
-                return landmarks
-        except Exception as e:
-            if self.logger: self.logger.error(f"读取地标文件失败: {e}")
-            return []  # 如果读取失败，返回空列表
 
     # ============================================================
     # 基础函数
@@ -159,7 +144,7 @@ class LandmarkDetectorCore:
                 self.current_landmark_index += 1
                 self.logger.info(f'[LandmarkDetector] reached "{prev_target}", switch to "{self.current_target_text()}"')
             else:
-                print('[LandmarkDetector] final landmark reached')
+                self.logger.info('[LandmarkDetector] final landmark reached')
 
     # ============================================================
     # 调试可视化
