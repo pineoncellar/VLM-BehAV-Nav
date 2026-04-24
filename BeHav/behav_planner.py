@@ -486,6 +486,7 @@ class BehavPlannerCore:
         pose.orientation.z = quaternion[2]
         pose.orientation.w = quaternion[3]
         self.final_goal_pose = pose
+        self.current_to_goal_dist = math.sqrt((self.goalX - self.x) ** 2 + (self.goalY - self.y) ** 2)
         if self.logger: self.logger.info(f"Goal x,y w.r.t. robot and odom : {(goalX_rob,goalY_rob)} {(self.goalX,self.goalY)}")
 
     def compute_velocity(self):

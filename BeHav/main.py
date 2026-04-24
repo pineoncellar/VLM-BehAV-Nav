@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from instruction_processor import get_instruction_breakdown, extract_lists_from_dict, get_similarity_scores, calculate_input_action_costs, get_ith_key_list
+from instruction_processor import get_instruction_breakdown, get_similarity_scores, calculate_input_action_costs, get_ith_key_list
 from landmark_vision import LandmarkDetectorCore
 from behav_planner import BehavPlannerCore
 
@@ -32,23 +32,33 @@ class BehavMainPipeline:
         if self.on_traj_image:
             self.on_traj_image(msg)
 
-    def run_instruction_reasoning(self, language_instruction='Walk to the red car and stop in front of it'):
+    def run_instruction_reasoning(self, language_instruction='Walk to the red car and stop in front of it', skip_nlp=False):
         """
         NLP 顶层指令分解模块
         """
         if self.logger:
-            self.logger.info(f"Running instruction reasoning for: {language_instruction}")
+            if skip_nlp:
+                self.logger.info(f"Running instruction reasoning for: {language_instruction} (Skipped LLM, using hardcoded)")
+            else:
+                self.logger.info(f"Running instruction reasoning for: {language_instruction}")
             
         reference_list = ['Stay on', 'Avoid', 'Yield', 'Stop']
         reference_costs = [0, 0.5, 0.7, 1]
 
-        instruction_breakdown = get_instruction_breakdown(language_instruction)
-        extracted_lists = extract_lists_from_dict(instruction_breakdown)
-
-        landmark_list = get_ith_key_list(instruction_breakdown, key_idx=1)
-        navigation_action_list = get_ith_key_list(instruction_breakdown, key_idx=2)
-        behavioral_action_list = get_ith_key_list(instruction_breakdown, key_idx=3)
-        behavioral_target_list = get_ith_key_list(instruction_breakdown, key_idx=4)
+        if skip_nlp:
+            import json
+            import os
+            instruction_breakdown = {}
+            landmark_list = json.loads(os.environ.get('PRESET_LANDMARKS', '["red car"]'))
+            navigation_action_list = json.loads(os.environ.get('PRESET_NAV_ACTIONS', '["walk to", "stop"]'))
+            behavioral_action_list = json.loads(os.environ.get('PRESET_BEHAV_ACTIONS', '["stay on", "avoid"]'))
+            behavioral_target_list = json.loads(os.environ.get('PRESET_BEHAV_TARGETS', '["pavement"]'))
+        else:
+            instruction_breakdown = get_instruction_breakdown(language_instruction)
+            landmark_list = get_ith_key_list(instruction_breakdown, key_idx=1)
+            navigation_action_list = get_ith_key_list(instruction_breakdown, key_idx=2)
+            behavioral_action_list = get_ith_key_list(instruction_breakdown, key_idx=3)
+            behavioral_target_list = get_ith_key_list(instruction_breakdown, key_idx=4)
 
         if self.logger:
             self.logger.info(f"Landmarks: {landmark_list}")

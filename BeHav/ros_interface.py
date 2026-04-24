@@ -64,13 +64,23 @@ class LandmarkDetectorNode(Node):
         print("\n" + "="*50)
         print("    欢迎使用 VLM-BehAV-Nav 导航系统")
         print("="*50)
-        user_input = input(">>> 请输入您的自然语言导航指令\n(直接回车将使用默认指令): ").strip()
-        if user_input:
-            instruction = user_input
+        
+        skip_nlp = os.environ.get('SKIP_NLP') == '1'
+        
+        if skip_nlp:
+            print("[系统] SKIP_NLP=1，自动跳过用户输入和底层的LLM大语言模型推理流程。")
+            instruction = 'Walk to the red car and stop in front of it'
+        else:
+            user_input = input(">>> 请输入您的自然语言导航指令\n(直接回车将使用默认指令): ").strip()
+            if user_input:
+                instruction = user_input
+                
         print(f"\n[系统] 正在处理指令: {instruction}\n")
         
         self.dual_logger.info(f"Using instruction: {instruction}")
-        self.pipeline.run_instruction_reasoning(instruction)
+        
+        # 将指令与 skip_nlp 标志传递给 pipeline
+        self.pipeline.run_instruction_reasoning(instruction, skip_nlp=skip_nlp)
         
         # ROS节点定义
         self.image_topic = "/camera_sensor/image_raw"
