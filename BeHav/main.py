@@ -12,11 +12,11 @@ class BehavMainPipeline:
     def __init__(self, logger=None):
         self.logger = logger
         
-        # 1. 实例化各个核心算法模块
+        # 实例化各个核心算法模块
         self.detector_core = LandmarkDetectorCore(logger=self.logger)
         self.behav_planner = BehavPlannerCore(logger=self.logger, goal_radius=2.5, goal_theta=0.0, goal_delta=0.0)
         
-        # 用于输出可视化的回调函数（供 ROS Interface 绑定）
+        # 用于输出可视化的回调函数（供 ROS 接口绑定）
         self.on_behav_costmap = None
         self.on_traj_image = None
         
@@ -98,7 +98,7 @@ class BehavMainPipeline:
         # 1. 默认：根据代价地图及障碍物获取规划路径的速度命令
         cmd_msg = self.behav_planner.compute_velocity()
 
-        # 2. 参考地标的直接定位情况 (如果有需要可以直接介入或者与 MPC 融合)
+        # 2. 参考地标的直接定位情况
         meas = self.detector_core.latest_measurement
         if meas is not None:
             distance_m, bearing_deg = meas

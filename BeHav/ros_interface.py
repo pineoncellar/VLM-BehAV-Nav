@@ -28,6 +28,7 @@ def setup_file_logger():
     return file_logger
 
 class DualLogger:
+    """日志模块，既输出到 ROS 控制台，也写入文件"""
     def __init__(self, ros_logger, file_logger):
         self.ros_logger = ros_logger
         self.file_logger = file_logger
@@ -45,6 +46,7 @@ class DualLogger:
         self.file_logger.warning(msg)
 
 class LandmarkDetectorNode(Node):
+    """ros2 节点：整合视觉地标检测、指令分解与行为规划，提供 ROS 接口"""
     def __init__(self):
         super().__init__('landmark_detector_node')
         
@@ -70,11 +72,11 @@ class LandmarkDetectorNode(Node):
         self.dual_logger.info(f"Using instruction: {instruction}")
         self.pipeline.run_instruction_reasoning(instruction)
         
-        # Override some properties if needed
+        # ROS节点定义
         self.image_topic = "/camera_sensor/image_raw"
         self.lidar_topic = "/velodyne_points"
         self.odom_topic = "/odom"
-        self.cmd_topic = "/cmd_vel"   # Or /ackermann_steering_controller/reference based on multiplexer
+        self.cmd_topic = "/cmd_vel"
         self.period_sec = 10.0
         self.control_period_sec = 0.1 # 10 Hz for control loop
 
@@ -166,8 +168,8 @@ class LandmarkDetectorNode(Node):
         self.dual_logger.info(f"==> [ros_interface] Publishing CMD: {msg.linear.x}, {msg.angular.z}")
 
 def run_instruction_pipeline():
+    """测试用，可直接调用 Pipeline 单次测试 NLP 并获取行为 costs"""
     print("Running initial instruction reasoning...")
-    # 可直接调用 Pipeline 单次测试 NLP 并获取行为 costs
     pipeline = BehavMainPipeline()
     pipeline.run_instruction_reasoning()
 

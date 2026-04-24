@@ -157,7 +157,7 @@ class LandmarkDetectorCore:
             if self.current_landmark_index + 1 < len(self.navigation_landmarks):
                 prev_target = self.current_target_text()
                 self.current_landmark_index += 1
-                print(f'[LandmarkDetector] reached "{prev_target}", switch to "{self.current_target_text()}"')
+                self.logger.info(f'[LandmarkDetector] reached "{prev_target}", switch to "{self.current_target_text()}"')
             else:
                 print('[LandmarkDetector] final landmark reached')
 
@@ -366,7 +366,7 @@ class LandmarkDetectorCore:
         ]
         if not all(needed):
             self.latest_measurement = None
-            print(f'[LandmarkDetector] target="{target_text}" not found')
+            self.logger.info(f'[LandmarkDetector] target="{target_text}" not found')
             return
 
         h, w = image_rgb.shape[:2]
@@ -393,12 +393,12 @@ class LandmarkDetectorCore:
 
         self.latest_measurement = [distance_m, float(bearing)]
 
-        print('--------------------------------------------------')
-        print(f'Current target         : {target_text}')
-        print(f'BBox                   : [{x_min}, {y_min}, {x_max}, {y_max}]')
-        print(f'Point used             : x={x}, y={y}')
-        print(f'Distance / Angle(deg)  : {self.latest_measurement}')
-        print('--------------------------------------------------')
+        self.logger.info('--------------------------------------------------')
+        self.logger.info(f'Current target         : {target_text}')
+        self.logger.info(f'BBox                   : [{x_min}, {y_min}, {x_max}, {y_max}]')
+        self.logger.info(f'Point used             : x={x}, y={y}')
+        self.logger.info(f'Distance / Angle(deg)  : {self.latest_measurement}')
+        self.logger.info('--------------------------------------------------')
 
         circled_img_rgb = self.draw_detection_overlay(
             image_rgb, x_min, y_min, x_max, y_max, x, y
