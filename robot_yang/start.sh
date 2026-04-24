@@ -5,7 +5,7 @@ source install/setup.bash
 killall -9 gzserver gzclient
 
 # 获取当前的显示端口，确保窗口能弹出到你的 RDP 界面
-export DISPLAY=:11.0  # 如果你的端口不是10，请根据 echo $DISPLAY 的结果修改
+export DISPLAY=$DISPLAY
 
 # 等待时间（秒）
 WAIT_TIME=4
