@@ -10,10 +10,17 @@ export DISPLAY=$DISPLAY
 # 等待时间（秒）
 WAIT_TIME=4
 
-# 使用 xfce4-terminal 启动仿真
-xfce4-terminal --title="Gazebo Simulation" -e "bash -c 'source install/setup.bash && ros2 launch carlike_robot_description gazebo_sim.launch.py; exec bash'"
+# 提取模型（World）名称为变量，方便后续修改
+WORLD_NAME="tree.world"
+# 动态拼凑绝对路径
+WORLD_PATH="$(pwd)/src/carlike_robot_description/worlds/$WORLD_NAME"
+
+# 启动仿真
+gnome-terminal --title="Gazebo Simulation" -- bash -c "source install/setup.bash && ros2 launch carlike_robot_description gazebo_sim.launch.py world:=$WORLD_PATH; exec bash"
+
 
 sleep $WAIT_TIME
 
-# 使用 xfce4-terminal 启动键盘控制
-xfce4-terminal --title="Keyboard Teleop" -e "bash -c 'source install/setup.bash && ros2 run teleop_twist_keyboard teleop_twist_keyboard; exec bash'"
+# 启动键盘控制
+gnome-terminal --title="Keyboard Teleop" -- bash -c 'source install/setup.bash && ros2 run teleop_twist_keyboard teleop_twist_keyboard; exec bash'
+
