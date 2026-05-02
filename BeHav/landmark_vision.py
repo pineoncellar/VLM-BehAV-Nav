@@ -214,8 +214,8 @@ class LandmarkDetectorCore:
             3. If visible, estimate the approximate camera-to-target distance in meters.
 
             Important rules:
-            - x_min and x_max must be integers in [0, {w - 1}]
-            - y_min and y_max must be integers in [0, {h - 1}]
+            - x_min, y_min, x_max, and y_max MUST be integers normalized to the range [0, 1000]
+            - Do not return actual pixel values, output the relative coordinates mapped to [0, 1000]
             - The box should tightly cover only the visible target landmark
             - If the landmark is partially visible, box only the visible part
             - If the target is not visible, set all coordinates and distance_m to null
@@ -356,10 +356,16 @@ class LandmarkDetectorCore:
 
         h, w = image_rgb.shape[:2]
 
-        x_min = max(0, min(w - 1, int(parsed["x_min"])))
-        y_min = max(0, min(h - 1, int(parsed["y_min"])))
-        x_max = max(0, min(w - 1, int(parsed["x_max"])))
-        y_max = max(0, min(h - 1, int(parsed["y_max"])))
+        # 从 1000x1000 的归一化坐标系转换回原图的像素坐标
+        x_min_px = int(parsed["x_min"] * w / 1000.0)
+        y_min_px = int(parsed["y_min"] * h / 1000.0)
+        x_max_px = int(parsed["x_max"] * w / 1000.0)
+        y_max_px = int(parsed["y_max"] * h / 1000.0)
+
+        x_min = max(0, min(w - 1, x_min_px))
+        y_min = max(0, min(h - 1, y_min_px))
+        x_max = max(0, min(w - 1, x_max_px))
+        y_max = max(0, min(h - 1, y_max_px))
 
         # 防止框顺序颠倒
         if x_min > x_max:
