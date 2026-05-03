@@ -8,7 +8,10 @@ import numpy as np
 import ast
 import json
 import os
+import logging
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -23,10 +26,11 @@ client = OpenAI(
 
 def get_instruction_breakdown(language_instruction):
     prompt = f'''
-    "{language_instruction}", can you list the landmarks (e.g., a building), navigation actions (e.g., go forward), 
-    general behavioral actions (e.g., stay on, avoid) and behavioral targets (e.g, pavement) in the paragraph given in quotes as four separate dictionaries.  
+    "{language_instruction}", can you extract the landmarks (e.g., a building), navigation actions (e.g., go forward), 
+    general behavioral actions (e.g., stay on, avoid) and behavioral targets (e.g., pavement) from the paragraph given in quotes.
     
-    Do not explain. Only output the four dictionaries.
+    Format the output as a SINGLE JSON dictionary where keys are "landmarks", "navigation_actions", "behavioral_actions", and "behavioral_targets", and the values are lists of strings.
+    Do not explain. Only output the JSON dictionary.
     '''
 
     response = client.chat.completions.create(
@@ -35,6 +39,7 @@ def get_instruction_breakdown(language_instruction):
     )
 
     instruction_breakdown_str = response.choices[0].message.content.strip()
+    logger.info(f"Raw LLM Response: {instruction_breakdown_str}")
 
     if instruction_breakdown_str.startswith("```"):
         lines = instruction_breakdown_str.splitlines()
@@ -55,6 +60,11 @@ def get_instruction_breakdown(language_instruction):
         parsed = ast.literal_eval(instruction_breakdown_str)
         if isinstance(parsed, dict):
             for key, value in parsed.items():
+                if isinstance(value, dict):
+                    value = list(value.values())
+                elif not isinstance(value, list):
+                    value = [value]
+                    
                 key_str = str(key).strip().lower().replace("-", " ").replace("_", " ")
                 if "landmark" in key_str:
                     normalized["landmarks"] = value
@@ -111,8 +121,8 @@ def get_instruction_breakdown(language_instruction):
     
     # 如果内容是空的（解析失败），则打印原始字符串以供调试
     if all(len(v) == 0 for v in normalized.values()):
-        print("Warning: Parsed breakdown is empty. Original model output:")
-        print(instruction_breakdown_str)
+        logger.warning("Parsed breakdown is empty. Original model output:")
+        logger.warning(instruction_breakdown_str)
 
     return normalized
 
