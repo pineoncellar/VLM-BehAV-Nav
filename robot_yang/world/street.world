@@ -1193,18 +1193,68 @@
       <pose>-9.93378 0.027886 0 0 -0 1.57</pose>
     </model>
     <state world_name='default'>
-      <sim_time>2093 623000000</sim_time>
-      <real_time>1347 190013878</real_time>
-      <wall_time>1777288161 266909381</wall_time>
-      <iterations>943186</iterations>
-      <model name='Dumpster'>
-        <pose>-6.94022 -8.91285 0.051373 -3e-06 3e-06 7.4e-05</pose>
+      <sim_time>4695 172000000</sim_time>
+      <real_time>126 65941965</real_time>
+      <wall_time>1777794564 69354716</wall_time>
+      <iterations>88169</iterations>
+      <model name='Construction Cone'>
+        <pose>5.99473 1.45669 0.050001 3e-06 1e-06 0.004977</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>-6.94022 -8.91285 0.051373 -3e-06 3e-06 7.4e-05</pose>
+          <pose>5.99473 1.45669 0.050001 3e-06 1e-06 0.004977</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 -9.8 0 -0 0</acceleration>
-          <wrench>0 0 -9.8 0 -0 0</wrench>
+          <acceleration>0 0 1.9104 -2.66892 0.535034 0</acceleration>
+          <wrench>0 0 1.9104 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Construction Cone_clone'>
+        <pose>7.02405 0.317003 0.05 -1e-06 -1e-06 -0.018094</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>7.02405 0.317003 0.05 -1e-06 -1e-06 -0.018094</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>-0 0 -0.161865 -1.1307 -0.535653 0</acceleration>
+          <wrench>-0 0 -0.161865 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Construction Cone_clone_0'>
+        <pose>8.36826 1.4543 0.05 0 -0 0.312254</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>8.36826 1.4543 0.05 0 -0 0.312254</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>-1e-06 -1e-06 1.23149 -0.502857 -1.07848 3.14159</acceleration>
+          <wrench>-1e-06 -1e-06 1.23149 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Construction Cone_clone_1'>
+        <pose>6.98009 2.39398 0.05 0 1e-06 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>6.98009 2.39398 0.05 0 1e-06 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>-0 -0 -0.212336 0.446469 0.630629 0</acceleration>
+          <wrench>-0 -0 -0.212336 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Dumpster'>
+        <pose>-6.94022 -8.91285 0.051377 3e-06 2e-06 7.2e-05</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>-6.94022 -8.91285 0.051377 3e-06 2e-06 7.2e-05</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0.011026 0.004234 14.9597 0.035043 1.38297 3.14159</acceleration>
+          <wrench>0.011026 0.004234 14.9597 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Dumpster_0'>
+        <pose>28.7952 3.38297 0.051377 3e-06 2e-06 -1.46197</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>28.7952 3.38297 0.051377 3e-06 2e-06 -1.46197</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0.005404 -0.010469 14.9597 -1.76766 -0.819462 -3.14157</acceleration>
+          <wrench>0.005404 -0.010469 14.9597 0 -0 0</wrench>
         </link>
       </model>
       <model name='House 1'>
@@ -1218,10 +1268,10 @@
         </link>
       </model>
       <model name='House 1_clone'>
-        <pose>21.4577 -4.83275 0 0 -0 0</pose>
+        <pose>24.1374 -4.83275 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>21.4577 -4.83275 0 0 -0 0</pose>
+          <pose>24.1374 -4.83275 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1267,11 +1317,71 @@
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-      <model name='House 3'>
-        <pose>8.9016 -18.5311 0 0 0 -1.55723</pose>
+      <model name='Lamp Post'>
+        <pose>14.3239 3.50591 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>8.9016 -18.5311 0 0 0 -1.55723</pose>
+          <pose>14.3239 3.50591 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Lamp Post_0'>
+        <pose>19.6767 -9.0279 0 0 0 -1.59183</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>19.6767 -9.0279 0 0 0 -1.59183</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Mailbox'>
+        <pose>11.0994 3.52874 0.05 5e-06 -2e-06 -1e-06</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>11.0994 3.52874 0.05 5e-06 -2e-06 -1e-06</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 -9.8 0 -0 0</acceleration>
+          <wrench>0 0 -9.8 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Mailbox_0'>
+        <pose>10.4307 -4.21139 0.05 5e-06 -2e-06 -1e-06</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>10.4307 -4.21139 0.05 5e-06 -2e-06 -1e-06</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 -9.8 0 -0 0</acceleration>
+          <wrench>0 0 -9.8 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Mailbox_0_clone'>
+        <pose>11.3439 -18.9434 0.05 5e-06 -2e-06 -1.52813</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>11.3439 -18.9434 0.05 5e-06 -2e-06 -1.52813</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 -9.8 0 -0 0</acceleration>
+          <wrench>0 0 -9.8 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='Stop Sign'>
+        <pose>29.0066 0.984609 0 0 0 -1.50204</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>29.0066 0.984609 0 0 0 -1.50204</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='apartment'>
+        <pose>-0.147165 -20.8775 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>-0.147165 -20.8775 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1288,10 +1398,10 @@
         </link>
       </model>
       <model name='asphalt_plane_0'>
-        <pose>19.9219 0.006389 0 0 -0 0</pose>
+        <pose>19.8726 0.115885 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>19.9219 0.006389 0 0 -0 0</pose>
+          <pose>19.8726 0.115885 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1307,50 +1417,80 @@
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
+      <model name='bus'>
+        <pose>17.633 -27.2391 0 0 0 -1.58913</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>17.633 -27.2391 0 0 0 -1.58913</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
       <model name='carlike_robot'>
-        <pose>0.21979 0.025111 0.046954 0 0.004794 0.016415</pose>
+        <pose>0.837926 0.115991 0.046955 -1e-06 0.004794 0.063715</pose>
         <scale>1 1 1</scale>
         <link name='base_footprint'>
-          <pose>0.21979 0.025111 0.046954 0 0.004794 0.016415</pose>
-          <velocity>3.6e-05 1.9e-05 -0.000496 -2.7e-05 0.000765 3.3e-05</velocity>
-          <acceleration>-6.7e-05 0.00405 0.067137 -0.055706 -0.323549 -0.003216</acceleration>
-          <wrench>-0.006077 0.368772 6.11359 0 -0 0</wrench>
+          <pose>0.837926 0.115991 0.046955 -1e-06 0.004794 0.063715</pose>
+          <velocity>2.5e-05 1.4e-05 -0.000492 -7.4e-05 0.000753 5e-05</velocity>
+          <acceleration>-0.000174 0.004541 0.064574 -0.124966 -0.341036 -0.006743</acceleration>
+          <wrench>-0.015879 0.413549 5.8802 0 -0 0</wrench>
         </link>
         <link name='left_backwheel'>
-          <pose>-0.420629 0.414648 0.270001 -4.2e-05 0.940033 0.016382</pose>
-          <velocity>0.000192 1.3e-05 -2.9e-05 7.1e-05 0.000862 3.5e-05</velocity>
-          <acceleration>0.017386 0.013594 -0.168596 0.059612 -0.224831 -0.001292</acceleration>
-          <wrench>0.017386 0.013594 -0.168596 0 -0 0</wrench>
+          <pose>0.179805 0.474812 0.270001 -3.1e-05 0.097023 0.063712</pose>
+          <velocity>0.000175 1.3e-05 -3.9e-05 8e-05 0.000782 3.3e-05</velocity>
+          <acceleration>0.019863 0.022192 -0.190264 0.096845 -0.30242 -0.024162</acceleration>
+          <wrench>0.019863 0.022192 -0.190264 0 -0 0</wrench>
         </link>
         <link name='left_bridge'>
-          <pose>0.898891 0.453805 0.272709 -5e-06 0.004794 0.016407</pose>
-          <velocity>0.000231 0.000913 0.013967 -0.00422 0.000659 6e-06</velocity>
-          <acceleration>0.0648 0.865319 15.2623 2.05618 -0.390983 -0.031026</acceleration>
-          <wrench>6.5e-05 0.000865 0.015262 0 -0 0</wrench>
+          <pose>1.496 0.576313 0.272709 -2e-06 0.004794 0.06372</pose>
+          <velocity>0.000229 0.000925 0.013965 -0.004237 0.000344 5e-06</velocity>
+          <acceleration>0.086828 0.859289 15.2467 2.08267 -0.596643 -0.051681</acceleration>
+          <wrench>8.7e-05 0.000859 0.015247 0 -0 0</wrench>
         </link>
         <link name='left_frontwheel'>
-          <pose>0.898891 0.453808 0.270001 -9.1e-05 1.53038 0.016316</pose>
-          <velocity>0.000218 0.000653 0.010668 -0.002969 0.000991 -0</velocity>
-          <acceleration>0.000381 -0.055594 223.092 -0.112706 -0.00187 0.000536</acceleration>
-          <wrench>0.000381 -0.055594 223.092 0 -0 0</wrench>
+          <pose>1.496 0.576317 0.270001 -3.14159 -1.07895 -3.07788</pose>
+          <velocity>0.00021 0.000665 0.010668 -0.003024 0.000955 -1e-06</velocity>
+          <acceleration>0.003164 -0.071809 223.106 -0.103175 -0.010683 0.000466</acceleration>
+          <wrench>0.003164 -0.071809 223.106 0 -0 0</wrench>
         </link>
         <link name='right_backwheel'>
-          <pose>-0.407497 -0.385239 0.27 7e-06 1.00836 0.016421</pose>
-          <velocity>0.00022 -2e-06 -9e-06 -0.000103 0.001012 3.4e-05</velocity>
-          <acceleration>0.016009 -0.002401 -0.126721 -0.113034 -0.07599 -0.002216</acceleration>
-          <wrench>0.016009 -0.002401 -0.126721 0 -0 0</wrench>
+          <pose>0.230742 -0.323559 0.270001 1.5e-05 0.104611 0.063716</pose>
+          <velocity>0.000215 -5e-06 -8e-06 -0.000137 0.000991 4.9e-05</velocity>
+          <acceleration>0.014499 0.001159 -0.127047 -0.110991 -0.098684 -0.00811</acceleration>
+          <wrench>0.014499 0.001159 -0.127047 0 -0 0</wrench>
         </link>
         <link name='right_bridge'>
-          <pose>0.912597 -0.381068 0.260956 0 0.004794 0.016416</pose>
-          <velocity>0.000204 -0.000211 -0.005509 0.001229 0.000749 -2.1e-05</velocity>
-          <acceleration>0.007093 -0.259973 -4.19128 1.22171 -0.349352 -0.057136</acceleration>
-          <wrench>7e-06 -0.00026 -0.004191 0 -0 0</wrench>
+          <pose>1.54916 -0.256977 0.260956 -2e-06 0.004794 0.063715</pose>
+          <velocity>0.000224 -0.000191 -0.005488 0.001178 0.00069 -2.1e-05</velocity>
+          <acceleration>0.034288 -0.259444 -4.17297 1.2187 -0.437182 -0.077512</acceleration>
+          <wrench>3.4e-05 -0.000259 -0.004173 0 -0 0</wrench>
         </link>
         <link name='right_frontwheel'>
-          <pose>0.912597 -0.381079 0.270001 -0.000128 1.54234 0.016289</pose>
-          <velocity>0.00024 0.000654 0.010668 -0.002971 0.00109 -0</velocity>
-          <acceleration>0.00077 -0.056294 223.197 -0.109061 -0.002051 0.000518</acceleration>
-          <wrench>0.00077 -0.056294 223.197 0 -0 0</wrench>
+          <pose>1.54916 -0.256989 0.270001 -3.14158 -1.27629 -3.07789</pose>
+          <velocity>0.000165 0.000662 0.010668 -0.003011 0.000751 0</velocity>
+          <acceleration>0.004691 -0.072127 223.177 -0.101325 -0.017763 0.000506</acceleration>
+          <wrench>0.004691 -0.072127 223.177 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='fire_hydrant'>
+        <pose>17.6673 -0.650728 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>17.6673 -0.650728 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='fountain'>
+        <pose>7.15099 1.29756 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>7.15099 1.29756 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
       <model name='grass'>
@@ -1373,61 +1513,291 @@
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-      <model name='grass_1'>
-        <pose>8.2176 -2.45588 0 0 -0 0</pose>
+      <model name='grass_10'>
+        <pose>4.76419 1.781 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='grass_plane'>
-          <pose>8.2176 -2.45588 0 0 -0 0</pose>
+          <pose>4.76419 1.781 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-      <model name='grass_2'>
-        <pose>6.22897 -2.45333 0 0 -0 0</pose>
+      <model name='grass_11'>
+        <pose>4.76996 3.77141 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='grass_plane'>
-          <pose>6.22897 -2.45333 0 0 -0 0</pose>
+          <pose>4.76996 3.77141 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-      <model name='grass_3'>
-        <pose>10.0994 -4.42922 0 0 -0 0</pose>
+      <model name='grass_12'>
+        <pose>2.77076 3.79474 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='grass_plane'>
-          <pose>10.0994 -4.42922 0 0 -0 0</pose>
+          <pose>2.77076 3.79474 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-      <model name='grass_4'>
-        <pose>8.1104 -4.44519 0 0 -0 0</pose>
+      <model name='grass_13'>
+        <pose>5.07402 4.69573 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='grass_plane'>
-          <pose>8.1104 -4.44519 0 0 -0 0</pose>
+          <pose>5.07402 4.69573 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-      <model name='grass_5'>
-        <pose>6.11785 -4.41983 0 0 -0 0</pose>
+      <model name='grass_14'>
+        <pose>2.44118 5.76888 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='grass_plane'>
-          <pose>6.11785 -4.41983 0 0 -0 0</pose>
+          <pose>2.44118 5.76888 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
-      <model name='grass_6'>
-        <pose>4.23941 -2.44836 0 0 -0 0</pose>
+      <model name='grass_15'>
+        <pose>4.31467 5.7511 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='grass_plane'>
-          <pose>4.23941 -2.44836 0 0 -0 0</pose>
+          <pose>4.31467 5.7511 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_16'>
+        <pose>4.95815 6.70014 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>4.95815 6.70014 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_17'>
+        <pose>3.00465 7.76167 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>3.00465 7.76167 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_18'>
+        <pose>4.99418 8.69495 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>4.99418 8.69495 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_19'>
+        <pose>6.75658 2.70708 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>6.75658 2.70708 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_20'>
+        <pose>12.6119 2.65209 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>12.6119 2.65209 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_21'>
+        <pose>14.6105 2.65182 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>14.6105 2.65182 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_22'>
+        <pose>16.1898 2.64487 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>16.1898 2.64487 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_23'>
+        <pose>14.5111 4.64952 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>14.5111 4.64952 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_24'>
+        <pose>14.453 6.64404 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>14.453 6.64404 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_25'>
+        <pose>21.5588 2.67354 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>21.5588 2.67354 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_26'>
+        <pose>18.0256 -2.06136 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>18.0256 -2.06136 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_27'>
+        <pose>18.0258 -4.05261 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>18.0258 -4.05261 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_29'>
+        <pose>13.0426 -2.44236 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>13.0426 -2.44236 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_30'>
+        <pose>13.0362 -4.44807 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>13.0362 -4.44807 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_31'>
+        <pose>13.0316 -6.39233 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>13.0316 -6.39233 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_32'>
+        <pose>13.0374 -8.37767 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>13.0374 -8.37767 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_33'>
+        <pose>13.0256 -10.3198 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>13.0256 -10.3198 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_34'>
+        <pose>11.0284 -11.0594 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>11.0284 -11.0594 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_35'>
+        <pose>11.5946 -12.2819 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>11.5946 -12.2819 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_36'>
+        <pose>11.5994 -14.2699 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>11.5994 -14.2699 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_37'>
+        <pose>11.5939 -16.0745 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>11.5939 -16.0745 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_38'>
+        <pose>11.491 -19.6396 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>11.491 -19.6396 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_39'>
+        <pose>11.4838 -21.5952 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>11.4838 -21.5952 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1448,6 +1818,16 @@
         <scale>1 1 1</scale>
         <link name='grass_plane'>
           <pose>2.25707 -2.67802 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grass_9'>
+        <pose>2.77029 1.78537 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='grass_plane'>
+          <pose>2.77029 1.78537 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1538,6 +1918,16 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>5.87054 -13.8283 1.4 0 -0 1.57134</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='grey_wall_0_clone_0_clone_clone'>
+        <pose>25.6936 -26.0808 0 0 -0 1.57134</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>25.6936 -26.0808 1.4 0 -0 1.57134</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1714,13 +2104,43 @@
         </link>
       </model>
       <model name='oak_tree'>
-        <pose>9.70382 -26.858 0 0 -0 0</pose>
+        <pose>23.0381 -23.0656 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>9.70382 -26.858 0 0 -0 0</pose>
+          <pose>23.0381 -23.0656 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='person_standing'>
+        <pose>13.0578 -12.0311 0.049999 -1e-06 1e-06 1.48075</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>13.0578 -12.0311 0.049999 -1e-06 1e-06 1.48075</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>-0.990865 1.71865 -1.44761 -1.74602 -1.09664 -0.045122</acceleration>
+          <wrench>-79.2692 137.492 -115.809 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='person_walking'>
+        <pose>23.663 -0.176134 0.049999 -2e-06 1e-06 0.05046</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>23.663 -0.176134 0.049999 -2e-06 1e-06 0.05046</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0.844747 2.03968 -2.81815 -2.13559 0.943464 0.103704</acceleration>
+          <wrench>67.5798 163.174 -225.452 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='person_walking_clone'>
+        <pose>15.1286 -17.9582 0.049999 -2e-06 -0 -1.54128</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>15.1286 -17.9582 0.049999 -2e-06 -0 -1.54128</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>2.02076 -0.886927 -2.82086 -2.04485 1.25169 -3.03792</acceleration>
+          <wrench>161.661 -70.9541 -225.669 0 -0 0</wrench>
         </link>
       </model>
       <model name='pine_tree'>
@@ -1734,54 +2154,64 @@
         </link>
       </model>
       <model name='salon'>
-        <pose>22.5961 -14.5384 0 0 0 -1.56229</pose>
+        <pose>22.6277 -13.8165 0 0 0 -1.57</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>22.5961 -14.5384 0 0 0 -1.56229</pose>
+          <pose>22.6277 -13.8165 0 0 0 -1.57</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='suv'>
+        <pose>21.4942 -19.3993 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>21.4942 -19.3993 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
       <model name='turtlebot'>
-        <pose>6.16631 -4.14428 0.050817 0.000206 -0.021641 -0.010504</pose>
+        <pose>6.17858 -4.60596 0.050823 0.000194 -0.021661 -0.073159</pose>
         <scale>1 1 1</scale>
         <link name='create::base'>
-          <pose>6.16631 -4.14428 0.050819 0.000206 -0.021641 -0.010504</pose>
-          <velocity>0.002431 -8.1e-05 -0.002335 0.005556 0.000735 0.000146</velocity>
-          <acceleration>-0.000423 -0.069574 -0.895653 -2.63284 -0.1279 0.413774</acceleration>
-          <wrench>-0.000944 -0.155427 -2.00089 0 -0 0</wrench>
+          <pose>6.17858 -4.60596 0.050824 0.000193 -0.021662 -0.073159</pose>
+          <velocity>0.000269 -0.000277 -0.000443 -0.003761 0.002048 -0.000186</velocity>
+          <acceleration>0.002164 0.065194 0.618152 2.87539 0.552838 -0.55476</acceleration>
+          <wrench>0.004834 0.145644 1.38095 0 -0 0</wrench>
         </link>
         <link name='create::left_wheel'>
-          <pose>6.16698 -4.01429 0.083015 0.00028 -0.630262 -0.010665</pose>
-          <velocity>0.002443 -0.000315 0.027045 0.009621 0.073989 0.000162</velocity>
-          <acceleration>-0.016171 -0.25769 64.3134 -1.69764 -0.233569 0.205824</acceleration>
-          <wrench>-0.000162 -0.002577 0.643134 0 -0 0</wrench>
+          <pose>6.18739 -4.47627 0.082981 0.000214 -0.228413 -0.073203</pose>
+          <velocity>0.000356 -4.8e-05 -0.035655 -0.007114 0.010468 -0.000183</velocity>
+          <acceleration>0.048631 0.259925 -62.1262 2.32777 1.21088 -0.351909</acceleration>
+          <wrench>0.000486 0.002599 -0.621262 0 -0 0</wrench>
         </link>
         <link name='create::right_wheel'>
-          <pose>6.16425 -4.27427 0.082972 0.000278 -0.644669 -0.010667</pose>
-          <velocity>0.002463 -0.000366 -0.050053 2.4e-05 0.07431 0.000145</velocity>
-          <acceleration>0.012242 -0.32113 -80.8724 -1.24518 0.013038 0.166477</acceleration>
-          <wrench>0.000122 -0.003211 -0.808724 0 -0 0</wrench>
+          <pose>6.16839 -4.73557 0.083021 0.000219 -0.195915 -0.073197</pose>
+          <velocity>0.000318 -4.8e-05 0.030131 0.001373 0.009709 -0.000161</velocity>
+          <acceleration>-0.012908 0.298823 78.0328 1.17266 -0.120754 -0.313665</acceleration>
+          <wrench>-0.000129 0.002988 0.780328 0 -0 0</wrench>
         </link>
         <link name='kinect::link'>
-          <pose>6.07266 -4.14336 0.352718 0.000206 -0.021641 -0.010504</pose>
-          <velocity>0.002661 -0.000855 -0.002139 0.002792 0.00076 0.00015</velocity>
-          <acceleration>-0.016073 -1.00475 -0.793058 -1.73662 -0.070499 0.136978</acceleration>
-          <wrench>-0.001607 -0.100475 -0.079306 0 -0 0</wrench>
+          <pose>6.08517 -4.59918 0.352722 0.000195 -0.02166 -0.073159</pose>
+          <velocity>0.000639 8.7e-05 -0.000408 -0.001375 0.001294 -0.000212</velocity>
+          <acceleration>0.076624 1.00243 0.540339 1.87115 0.313398 -0.431536</acceleration>
+          <wrench>0.007662 0.100243 0.054034 0 -0 0</wrench>
         </link>
         <link name='rack'>
-          <pose>6.16631 -4.14428 0.050817 0.000206 -0.021641 -0.010504</pose>
-          <velocity>0.002431 -2.3e-05 -0.002254 0.004363 0.000743 -6.8e-05</velocity>
-          <acceleration>0.001659 0.108456 -0.827702 1.28246 -0.107634 0.209056</acceleration>
-          <wrench>0.003706 0.242291 -1.84909 0 -0 0</wrench>
+          <pose>6.17858 -4.60596 0.050823 0.000194 -0.021661 -0.073159</pose>
+          <velocity>0.000253 -0.000326 -0.000492 -0.002733 0.001723 8.9e-05</velocity>
+          <acceleration>-0.005352 -0.105807 0.568265 -0.864391 0.437863 0.147428</acceleration>
+          <wrench>-0.011957 -0.236372 1.2695 0 -0 0</wrench>
         </link>
       </model>
-      <model name='water_tower'>
-        <pose>22.1241 -24.8876 0 0 -0 0</pose>
+      <model name='warehouse_robot'>
+        <pose>2.41663 1.58043 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>22.1241 -24.8876 0 0 -0 0</pose>
+          <pose>2.41663 1.58043 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1793,7 +2223,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>2.93281 0.905629 15.6827 0 1.3338 -0.028758</pose>
+        <pose>7.34518 2.69128 18.7192 0 0.657796 -0.995223</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -3171,118 +3601,6 @@
       </link>
       <pose>5.87054 -13.8283 0 0 -0 1.57134</pose>
     </model>
-    <model name='House 3'>
-      <static>1</static>
-      <link name='link'>
-        <collision name='collision'>
-          <geometry>
-            <mesh>
-              <uri>model://house_3/meshes/house_3.dae</uri>
-              <scale>1.5 1.5 1.5</scale>
-            </mesh>
-          </geometry>
-          <max_contacts>10</max_contacts>
-          <surface>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-            <friction>
-              <torsional>
-                <ode/>
-              </torsional>
-              <ode/>
-            </friction>
-          </surface>
-        </collision>
-        <visual name='visual'>
-          <geometry>
-            <mesh>
-              <uri>model://house_3/meshes/house_3.dae</uri>
-              <scale>1.5 1.5 1.5</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://house_3/materials/scripts</uri>
-              <uri>model://house_3/materials/textures</uri>
-              <uri>model://house_1/materials/textures</uri>
-              <name>House_3/Diffuse</name>
-            </script>
-            <shader type='normal_map_tangent_space'>
-              <normal_map>model://house_1/materials/textures/House_1_Normal.png</normal_map>
-            </shader>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>15.4248 -15.1905 0 0 -0 0</pose>
-    </model>
-    <model name='oak_tree'>
-      <static>1</static>
-      <link name='link'>
-        <collision name='collision'>
-          <geometry>
-            <mesh>
-              <uri>model://oak_tree/meshes/oak_tree.dae</uri>
-            </mesh>
-          </geometry>
-          <max_contacts>10</max_contacts>
-          <surface>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-            <friction>
-              <torsional>
-                <ode/>
-              </torsional>
-              <ode/>
-            </friction>
-          </surface>
-        </collision>
-        <visual name='branch'>
-          <geometry>
-            <mesh>
-              <uri>model://oak_tree/meshes/oak_tree.dae</uri>
-              <submesh>
-                <name>Branch</name>
-              </submesh>
-            </mesh>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://oak_tree/materials/scripts/</uri>
-              <uri>model://oak_tree/materials/textures/</uri>
-              <name>OakTree/Branch</name>
-            </script>
-          </material>
-        </visual>
-        <visual name='bark'>
-          <geometry>
-            <mesh>
-              <uri>model://oak_tree/meshes/oak_tree.dae</uri>
-              <submesh>
-                <name>Bark</name>
-              </submesh>
-            </mesh>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://oak_tree/materials/scripts/</uri>
-              <uri>model://oak_tree/materials/textures/</uri>
-              <name>OakTree/Bark</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>9.70382 -26.858 0 0 -0 0</pose>
-    </model>
     <model name='pine_tree'>
       <static>1</static>
       <link name='link'>
@@ -3382,43 +3700,7 @@
         <enable_wind>0</enable_wind>
         <kinematic>0</kinematic>
       </link>
-      <pose>20.1774 -14.9474 0 0 -0 0</pose>
-    </model>
-    <model name='water_tower'>
-      <static>1</static>
-      <link name='link'>
-        <collision name='collision'>
-          <geometry>
-            <mesh>
-              <uri>model://water_tower/meshes/water_tower.dae</uri>
-            </mesh>
-          </geometry>
-          <max_contacts>10</max_contacts>
-          <surface>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-            <friction>
-              <torsional>
-                <ode/>
-              </torsional>
-              <ode/>
-            </friction>
-          </surface>
-        </collision>
-        <visual name='visual'>
-          <geometry>
-            <mesh>
-              <uri>model://water_tower/meshes/water_tower.dae</uri>
-            </mesh>
-          </geometry>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>22.1241 -24.8876 0 0 -0 0</pose>
+      <pose>22.6277 -13.8164 0 0 -0 -1.57</pose>
     </model>
     <model name='Dumpster'>
       <link name='link'>
@@ -4645,214 +4927,6 @@
       </joint>
       <pose>6.18485 -4.0891 0 0 -0 0</pose>
     </model>
-    <model name='grass'>
-      <static>1</static>
-      <link name='grass_plane'>
-        <visual name='visual'>
-          <pose>0 0 0.07 0 -0 0</pose>
-          <cast_shadows>0</cast_shadows>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>2 2</size>
-            </plane>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://grass/materials/scripts</uri>
-              <uri>model://grass/materials/textures</uri>
-              <name>vrc/grass_small</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>12.2113 -2.43669 0 0 -0 0</pose>
-    </model>
-    <model name='grass_0'>
-      <static>1</static>
-      <link name='grass_plane'>
-        <visual name='visual'>
-          <pose>0 0 0.07 0 -0 0</pose>
-          <cast_shadows>0</cast_shadows>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>2 2</size>
-            </plane>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://grass/materials/scripts</uri>
-              <uri>model://grass/materials/textures</uri>
-              <name>vrc/grass_small</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>10.2104 -2.45309 0 0 -0 0</pose>
-    </model>
-    <model name='grass_1'>
-      <static>1</static>
-      <link name='grass_plane'>
-        <visual name='visual'>
-          <pose>0 0 0.07 0 -0 0</pose>
-          <cast_shadows>0</cast_shadows>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>2 2</size>
-            </plane>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://grass/materials/scripts</uri>
-              <uri>model://grass/materials/textures</uri>
-              <name>vrc/grass_small</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>8.2176 -2.45588 0 0 -0 0</pose>
-    </model>
-    <model name='grass_2'>
-      <static>1</static>
-      <link name='grass_plane'>
-        <visual name='visual'>
-          <pose>0 0 0.07 0 -0 0</pose>
-          <cast_shadows>0</cast_shadows>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>2 2</size>
-            </plane>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://grass/materials/scripts</uri>
-              <uri>model://grass/materials/textures</uri>
-              <name>vrc/grass_small</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>6.22897 -2.45333 0 0 -0 0</pose>
-    </model>
-    <model name='grass_3'>
-      <static>1</static>
-      <link name='grass_plane'>
-        <visual name='visual'>
-          <pose>0 0 0.07 0 -0 0</pose>
-          <cast_shadows>0</cast_shadows>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>2 2</size>
-            </plane>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://grass/materials/scripts</uri>
-              <uri>model://grass/materials/textures</uri>
-              <name>vrc/grass_small</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>10.0994 -4.42922 0 0 -0 0</pose>
-    </model>
-    <model name='grass_4'>
-      <static>1</static>
-      <link name='grass_plane'>
-        <visual name='visual'>
-          <pose>0 0 0.07 0 -0 0</pose>
-          <cast_shadows>0</cast_shadows>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>2 2</size>
-            </plane>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://grass/materials/scripts</uri>
-              <uri>model://grass/materials/textures</uri>
-              <name>vrc/grass_small</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>8.1104 -4.44519 0 0 -0 0</pose>
-    </model>
-    <model name='grass_5'>
-      <static>1</static>
-      <link name='grass_plane'>
-        <visual name='visual'>
-          <pose>0 0 0.07 0 -0 0</pose>
-          <cast_shadows>0</cast_shadows>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>2 2</size>
-            </plane>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://grass/materials/scripts</uri>
-              <uri>model://grass/materials/textures</uri>
-              <name>vrc/grass_small</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>6.11785 -4.41983 0 0 -0 0</pose>
-    </model>
-    <model name='grass_6'>
-      <static>1</static>
-      <link name='grass_plane'>
-        <visual name='visual'>
-          <pose>0 0 0.07 0 -0 0</pose>
-          <cast_shadows>0</cast_shadows>
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>2 2</size>
-            </plane>
-          </geometry>
-          <material>
-            <script>
-              <uri>model://grass/materials/scripts</uri>
-              <uri>model://grass/materials/textures</uri>
-              <name>vrc/grass_small</name>
-            </script>
-          </material>
-        </visual>
-        <self_collide>0</self_collide>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>4.23941 -2.44836 0 0 -0 0</pose>
-    </model>
     <model name='grass_7'>
       <static>1</static>
       <link name='grass_plane'>
@@ -4904,6 +4978,1977 @@
         <kinematic>0</kinematic>
       </link>
       <pose>2.25707 -2.67802 0 0 -0 0</pose>
+    </model>
+    <model name='grass_9'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>2.77029 1.78537 0 0 -0 0</pose>
+    </model>
+    <model name='grass_10'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>4.76419 1.781 0 0 -0 0</pose>
+    </model>
+    <model name='grass_11'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>4.76996 3.77141 0 0 -0 0</pose>
+    </model>
+    <model name='grass_12'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>2.77076 3.79474 0 0 -0 0</pose>
+    </model>
+    <model name='grass_13'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>5.07402 4.69573 0 0 -0 0</pose>
+    </model>
+    <model name='grass_14'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>2.44118 5.76888 0 0 -0 0</pose>
+    </model>
+    <model name='grass_15'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>4.31467 5.7511 0 0 -0 0</pose>
+    </model>
+    <model name='grass_16'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>4.95815 6.70014 0 0 -0 0</pose>
+    </model>
+    <model name='grass_17'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>3.00465 7.76167 0 0 -0 0</pose>
+    </model>
+    <model name='grass_18'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>4.99418 8.69495 0 0 -0 0</pose>
+    </model>
+    <model name='grass_19'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>6.75658 2.70708 0 0 -0 0</pose>
+    </model>
+    <model name='grass_20'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>12.6119 2.65209 0 0 -0 0</pose>
+    </model>
+    <model name='grass_21'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>14.6105 2.65182 0 0 -0 0</pose>
+    </model>
+    <model name='grass_22'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>16.1898 2.64487 0 0 -0 0</pose>
+    </model>
+    <model name='grass_23'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>14.5111 4.64952 0 0 -0 0</pose>
+    </model>
+    <model name='grass_24'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>14.453 6.64404 0 0 -0 0</pose>
+    </model>
+    <model name='grass_25'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>21.5588 2.67354 0 0 -0 0</pose>
+    </model>
+    <model name='grass_26'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>18.0256 -2.06136 0 0 -0 0</pose>
+    </model>
+    <model name='grass_27'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>18.0258 -4.05261 0 0 -0 0</pose>
+    </model>
+    <model name='grass_29'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>13.0426 -2.44236 0 0 -0 0</pose>
+    </model>
+    <model name='grass_30'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>13.0362 -4.44807 0 0 -0 0</pose>
+    </model>
+    <model name='grass_31'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>13.0316 -6.39233 0 0 -0 0</pose>
+    </model>
+    <model name='grass_32'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>13.0374 -8.37767 0 0 -0 0</pose>
+    </model>
+    <model name='grass_33'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>13.0256 -10.3198 0 0 -0 0</pose>
+    </model>
+    <model name='grass_34'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>11.0284 -11.0594 0 0 -0 0</pose>
+    </model>
+    <model name='grass_35'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>11.5946 -12.2819 0 0 -0 0</pose>
+    </model>
+    <model name='grass_36'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>11.5994 -14.2699 0 0 -0 0</pose>
+    </model>
+    <model name='grass_37'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>11.5939 -16.0745 0 0 -0 0</pose>
+    </model>
+    <model name='grass_38'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>11.491 -19.6396 0 0 -0 0</pose>
+    </model>
+    <model name='grass_39'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>11.4838 -21.5952 0 0 -0 0</pose>
+    </model>
+    <model name='grey_wall_0_clone_0_clone_clone'>
+      <static>1</static>
+      <link name='link'>
+        <pose>0 0 1.4 0 -0 0</pose>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>7.5 0.2 2.8</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <box>
+              <size>7.5 0.2 2.8</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grey_wall/materials/scripts</uri>
+              <uri>model://grey_wall/materials/textures</uri>
+              <name>vrc/grey_wall</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>25.6936 -26.0808 0 0 -0 1.57134</pose>
+    </model>
+    <model name='fire_hydrant'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://fire_hydrant/meshes/fire_hydrant.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://fire_hydrant/meshes/fire_hydrant.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>18.4267 -0.635233 0 0 -0 0</pose>
+    </model>
+    <model name='warehouse_robot'>
+      <static>1</static>
+      <link name='link'>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://warehouse_robot/meshes/robot.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <collision name='collision_base'>
+          <pose>0 0 0.20437 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.55508 1.0228 0.40874</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <collision name='collision_bumper'>
+          <pose>0 0 0.062205 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.67266 1.17126 0.12441</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <collision name='collision_column_large'>
+          <pose>0 -0.27539 0.43738 0 -0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.08652</radius>
+              <length>0.87476</length>
+            </cylinder>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <collision name='collision_column_small'>
+          <pose>0 -0.27539 0.70424 0 -0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.04261</radius>
+              <length>1.40848</length>
+            </cylinder>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>2.41663 1.58043 0 0 -0 0</pose>
+    </model>
+    <model name='Stop Sign'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://stop_sign/meshes/stop_sign.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://stop_sign/meshes/stop_sign.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://stop_sign/materials/scripts</uri>
+              <uri>model://stop_sign/materials/textures</uri>
+              <name>StopSign/Diffuse</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>29.0066 0.984609 0 0 -0 0</pose>
+    </model>
+    <model name='Dumpster_0'>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <scale>1.5 1.5 1.5</scale>
+              <uri>model://dumpster/meshes/dumpster.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <scale>1.5 1.5 1.5</scale>
+              <uri>model://dumpster/meshes/dumpster.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://dumpster/materials/scripts</uri>
+              <uri>model://dumpster/materials/textures</uri>
+              <name>Dumpster/Diffuse</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>28.021 3.29842 0 0 -0 0</pose>
+    </model>
+    <model name='Lamp Post'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://lamp_post/meshes/lamp_post.dae</uri>
+              <scale>3 3 3</scale>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://lamp_post/meshes/lamp_post.dae</uri>
+              <scale>3 3 3</scale>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>14.3239 3.50591 0 0 -0 0</pose>
+    </model>
+    <model name='Lamp Post_0'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://lamp_post/meshes/lamp_post.dae</uri>
+              <scale>3 3 3</scale>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://lamp_post/meshes/lamp_post.dae</uri>
+              <scale>3 3 3</scale>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>19.6767 -9.0279 0 0 -0 -1.57</pose>
+    </model>
+    <model name='Mailbox'>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://mailbox/meshes/mailbox.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://mailbox/meshes/mailbox.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://mailbox/materials/scripts</uri>
+              <uri>model://mailbox/materials/textures</uri>
+              <name>Mailbox/Diffuse</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>11.0994 3.52874 0 0 -0 0</pose>
+    </model>
+    <model name='Mailbox_0'>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://mailbox/meshes/mailbox.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://mailbox/meshes/mailbox.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://mailbox/materials/scripts</uri>
+              <uri>model://mailbox/materials/textures</uri>
+              <name>Mailbox/Diffuse</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>10.4307 -4.21139 0 0 -0 0</pose>
+    </model>
+    <model name='person_walking'>
+      <link name='link'>
+        <inertial>
+          <pose>0 0 0.95 0 -0 0</pose>
+          <mass>80</mass>
+          <inertia>
+            <ixx>27.82</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>24.88</iyy>
+            <iyz>0</iyz>
+            <izz>4.57</izz>
+          </inertia>
+        </inertial>
+        <collision name='bottom'>
+          <pose>0 0 0.01 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.35 0.75 0.02</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <collision name='person'>
+          <pose>0 0 -0.02 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://person_walking/meshes/walking.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <pose>0 0 -0.02 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://person_walking/meshes/walking.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>23.6606 -0.176282 0 0 -0 0</pose>
+    </model>
+    <model name='person_standing'>
+      <link name='link'>
+        <inertial>
+          <pose>0 -0.1 0.95 0 -0 0</pose>
+          <mass>80</mass>
+          <inertia>
+            <ixx>24.88</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>25.73</iyy>
+            <iyz>0</iyz>
+            <izz>2.48</izz>
+          </inertia>
+        </inertial>
+        <collision name='bottom'>
+          <pose>0 -0.1 0.01 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.5 0.35 0.02</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <collision name='person'>
+          <pose>0 0 0.02 0.04 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://person_standing/meshes/standing.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <pose>0 0 0.02 0.04 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://person_standing/meshes/standing.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>13.192 -12.0552 0 0 -0 0</pose>
+    </model>
+    <model name='Construction Cone'>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <scale>10 10 10</scale>
+              <uri>model://construction_cone/meshes/construction_cone.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <scale>10 10 10</scale>
+              <uri>model://construction_cone/meshes/construction_cone.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>6.45863 1.00424 0 0 -0 0</pose>
+    </model>
+    <model name='Construction Cone_clone'>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <scale>10 10 10</scale>
+              <uri>model://construction_cone/meshes/construction_cone.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <scale>10 10 10</scale>
+              <uri>model://construction_cone/meshes/construction_cone.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>7.28671 0.310493 0.050001 -3e-06 3e-06 0</pose>
+    </model>
+    <model name='Construction Cone_clone_0'>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <scale>10 10 10</scale>
+              <uri>model://construction_cone/meshes/construction_cone.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <scale>10 10 10</scale>
+              <uri>model://construction_cone/meshes/construction_cone.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>8.27312 0.958481 0.050001 -3e-06 3e-06 0</pose>
+    </model>
+    <model name='Construction Cone_clone_1'>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <scale>10 10 10</scale>
+              <uri>model://construction_cone/meshes/construction_cone.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <scale>10 10 10</scale>
+              <uri>model://construction_cone/meshes/construction_cone.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>7.06006 1.59438 0.050001 -3e-06 3e-06 0</pose>
+    </model>
+    <model name='fountain'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://fountain/meshes/fountain.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://fountain/meshes/fountain.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>7.15099 1.29756 0 0 -0 0</pose>
+    </model>
+    <model name='grass'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>4.16151 -2.67394 0 0 -0 0</pose>
+    </model>
+    <model name='grass_0'>
+      <static>1</static>
+      <link name='grass_plane'>
+        <visual name='visual'>
+          <pose>0 0 0.07 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>2 2</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://grass/materials/scripts</uri>
+              <uri>model://grass/materials/textures</uri>
+              <name>vrc/grass_small</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>4.24055 -2.68822 0 0 -0 0</pose>
+    </model>
+    <model name='Mailbox_0_clone'>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://mailbox/meshes/mailbox.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://mailbox/meshes/mailbox.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://mailbox/materials/scripts</uri>
+              <uri>model://mailbox/materials/textures</uri>
+              <name>Mailbox/Diffuse</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>11.3439 -18.9434 0.05 5e-06 -2e-06 -1e-06</pose>
+    </model>
+    <model name='suv'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <pose>0 0 0 0 0 -1.5708</pose>
+          <geometry>
+            <mesh>
+              <scale>0.06 0.06 0.06</scale>
+              <uri>model://suv/meshes/suv.obj</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <pose>0 0 0 0 0 -1.5708</pose>
+          <geometry>
+            <mesh>
+              <scale>0.06 0.06 0.06</scale>
+              <uri>model://suv/meshes/suv.obj</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>20.8981 -20.5777 0 0 -0 0</pose>
+    </model>
+    <model name='apartment'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://apartment/meshes/apartment.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>model://apartment/meshes/apartment.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>-0.147165 -20.8775 0 0 -0 0</pose>
+    </model>
+    <model name='bus'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <scale>0.01 0.01 0.01</scale>
+              <uri>model://bus/meshes/bus.obj</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <scale>0.01 0.01 0.01</scale>
+              <uri>model://bus/meshes/bus.obj</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>16 -27.55 0 0 -0 -1.57</pose>
+    </model>
+    <model name='person_walking_clone'>
+      <link name='link'>
+        <inertial>
+          <pose>0 0 0.95 0 -0 0</pose>
+          <mass>80</mass>
+          <inertia>
+            <ixx>27.82</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>24.88</iyy>
+            <iyz>0</iyz>
+            <izz>4.57</izz>
+          </inertia>
+        </inertial>
+        <collision name='bottom'>
+          <pose>0 0 0.01 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.35 0.75 0.02</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <collision name='person'>
+          <pose>0 0 -0.02 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://person_walking/meshes/walking.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <pose>0 0 -0.02 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://person_walking/meshes/walking.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>14.5079 -18 0.050001 1e-06 -1e-06 0.04849</pose>
+    </model>
+    <model name='oak_tree'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>model://oak_tree/meshes/oak_tree.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='branch'>
+          <geometry>
+            <mesh>
+              <uri>model://oak_tree/meshes/oak_tree.dae</uri>
+              <submesh>
+                <name>Branch</name>
+              </submesh>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://oak_tree/materials/scripts/</uri>
+              <uri>model://oak_tree/materials/textures/</uri>
+              <name>OakTree/Branch</name>
+            </script>
+          </material>
+        </visual>
+        <visual name='bark'>
+          <geometry>
+            <mesh>
+              <uri>model://oak_tree/meshes/oak_tree.dae</uri>
+              <submesh>
+                <name>Bark</name>
+              </submesh>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://oak_tree/materials/scripts/</uri>
+              <uri>model://oak_tree/materials/textures/</uri>
+              <name>OakTree/Bark</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <pose>23.0381 -23.0656 0 0 -0 0</pose>
     </model>
   </world>
 </sdf>
