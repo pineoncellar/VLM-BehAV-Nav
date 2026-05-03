@@ -304,6 +304,8 @@ class BehavPlannerCore:
         if not self.enable_clipseg:
             return
         if not self.prompts:
+            self.behav_costmap = None
+            self.received_img_once = True
             return
         
         try:
