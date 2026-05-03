@@ -11,5 +11,6 @@ dependencies = [
     "requests",
     "opencv-python",
     "matplotlib",
-    "Pillow"
+    "Pillow",
+    "ultralytics>=8.4.46",
 ]
