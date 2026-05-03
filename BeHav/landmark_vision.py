@@ -114,7 +114,8 @@ class LandmarkDetectorCore:
     def compute_bearing(self, pixel_x, image_width):
         """
         返回角度制（degree）
-        图像原点在左上角，x 向右增加
+        图像原点在左上角，x 向右增加。
+        遵循 ROS 坐标系约定：车体正前方为 0 度，向左偏为正（逆时针正），向右偏为负。
         """
         if image_width <= 1:
             return 0.0
@@ -123,7 +124,8 @@ class LandmarkDetectorCore:
         half_fov_rad = math.radians(self.horizontal_fov_deg / 2.0)
 
         fx = cx / math.tan(half_fov_rad)
-        angle_rad = math.atan((pixel_x - cx) / fx)
+        # 当 pixel_x > cx (目标在画面右侧) 时，偏角应为负值
+        angle_rad = math.atan((cx - pixel_x) / fx)
         return math.degrees(angle_rad)
 
     def bbox_to_target_point(self, x_min, y_min, x_max, y_max):
@@ -190,6 +192,7 @@ class LandmarkDetectorCore:
     # VLM 查询
     # ============================================================
     def query_target_bbox_and_distance(self, image_rgb, target_text):
+        # TODO:优化距离判断
         h, w = image_rgb.shape[:2]
 
         prompt = dedent(f"""
