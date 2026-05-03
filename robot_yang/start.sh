@@ -11,9 +11,9 @@ export DISPLAY=$DISPLAY
 WAIT_TIME=4
 
 # 提取模型（World）名称为变量，方便后续修改
-WORLD_NAME="tree.world"
+WORLD_NAME="street.world"
 # 动态拼凑绝对路径
-WORLD_PATH="$(pwd)/src/carlike_robot_description/worlds/$WORLD_NAME"
+WORLD_PATH="$(pwd)/world/$WORLD_NAME"
 
 # 启动仿真
 gnome-terminal --title="Gazebo Simulation" -- bash -c "source install/setup.bash && ros2 launch carlike_robot_description gazebo_sim.launch.py world:=$WORLD_PATH; exec bash"
