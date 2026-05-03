@@ -8,3 +8,6 @@
 BeHav/Image_plots
 BeHav/landmark_data.json
 BeHav/.env
+
+# 模型文件
+BeHav/FastSAM-x.pt
