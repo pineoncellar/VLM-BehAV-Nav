@@ -11,3 +11,7 @@ BeHav/.env
 
 # 模型文件
 BeHav/FastSAM-x.pt
+
+# 脚本相关
+BeHav/script/*
+!BeHav/script/*.py
