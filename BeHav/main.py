@@ -2,7 +2,6 @@ import logging
 import numpy as np
 from instruction_processor import get_instruction_breakdown, get_similarity_scores, calculate_input_action_costs, get_ith_key_list
 from landmark_vision import LandmarkDetectorCore
-from behav_planner import BehavPlannerCore
 
 class BehavMainPipeline:
     """
@@ -14,15 +13,10 @@ class BehavMainPipeline:
         
         # 实例化各个核心算法模块
         self.detector_core = LandmarkDetectorCore(logger=self.logger)
-        self.behav_planner = BehavPlannerCore(logger=self.logger, goal_radius=2.5, goal_theta=0.0, goal_delta=0.0)
         
         # 用于输出可视化的回调函数（供 ROS 接口绑定）
         self.on_behav_costmap = None
         self.on_traj_image = None
-        
-        # 绑定 BehavPlannerCore 的可视化输出到本类的分发口
-        self.behav_planner.on_behav_costmap = self._distribute_costmap
-        self.behav_planner.on_traj_image = self._distribute_traj
 
     def _distribute_costmap(self, msg):
         if self.on_behav_costmap:
@@ -77,10 +71,13 @@ class BehavMainPipeline:
         if isinstance(navigation_action_list, np.ndarray):
             navigation_action_list = navigation_action_list.tolist()
 
-        self.behav_planner.prompts = behavioral_target_list or []
-        self.behav_planner.cost_values = input_action_costs or []
+        
+        # 将最新的 LLM 提取属性缓存，供 control loop 频率下发
+        self.current_prompts = behavioral_target_list or []
+        self.current_behavior_rule = "avoid_" + "_".join(self.current_prompts) if self.current_prompts else ""
 
         self.detector_core.navigation_landmarks = landmark_list or []
+
         self.detector_core.navigation_actions = navigation_action_list or []
 
     def process_vision_cv2(self, cv_image, depth_image=None):
@@ -93,31 +90,58 @@ class BehavMainPipeline:
         """
         传递 ROS 数据至 BehavPlannerCore
         """
-        if image_msg is not None:
-            self.behav_planner.process_image(image_msg)
-        if pointcloud_msg is not None:
-            self.behav_planner.process_pointcloud(pointcloud_msg)
-        if odom_msg is not None:
-            self.behav_planner.process_odom(odom_msg)
+        pass
+
 
     def compute_control_command(self):
         """
-        在 MainPipeline 中决策最终的控制下发。
-        结合 behav_planner 的运动学求解以及 detector_core 定位的当前目标方位进行加权或逻辑覆盖
+        分布式 ROS 节点通信版本：
+        不再直接计算运动学速度，而是将 LLM 解析出的语义和目标转化为 Waypoint 和 Semantic Topic。
+        只有在距离极度接近时，才发布直接覆盖的 Twsit 让车停下。
         """
-        # 1. 默认：根据代价地图及障碍物获取规划路径的速度命令
-        cmd_msg = self.behav_planner.compute_velocity()
+        from geometry_msgs.msg import Twist, PoseStamped
+        from std_msgs.msg import String
+        import json
+        import math
 
-        # 2. 参考地标的直接定位情况
+        cmd_override = None
+        wp_msg = None
+        semantic_msg = None
+
+        # 1. 向下层建图节点发送行为准则 (Behavior Rule)
+        if hasattr(self, 'current_prompts') and self.current_prompts:
+            rule_dict = {
+                "prompts": self.current_prompts,
+                "rule": self.current_behavior_rule
+            }
+            s = String()
+            s.data = json.dumps(rule_dict)
+            semantic_msg = s
+
+        # 2. 从 VLM 获取地标位置，下发给 Rollout 节点
         meas = self.detector_core.latest_measurement
         if meas is not None:
             distance_m, bearing_deg = meas
-            # 如果地标在视野内，将其作为局部目标传递给 planner
-            self.behav_planner.goal_radius = distance_m
-            self.behav_planner.goal_theta = bearing_deg
-            self.behav_planner.received_final_goal_odom = False # 强制重新计算以车辆中心为基准的新目标点
-            if distance_m < 1.0: # 如果距离目标极近，可直接发送停止指令或大幅降低速度
-                cmd_msg.linear.x *= 0.5
-                cmd_msg.angular.z *= 0.5
+            if distance_m < 1.0:
+                # 距离过近，发送直接停止指令 (急停保护)
+                cmd_override = Twist()
+                cmd_override.linear.x = 0.0
+                cmd_override.angular.z = 0.0
+            else:
+                # 还有距离，发送局部轨迹坐标给底层 Rollout，要求底端自行避障行驶
+                wp = PoseStamped()
+                wp.header.frame_id = "base_footprint"
+                # bearing_deg 转换为弧度
+                theta = math.radians(bearing_deg)
+                wp.pose.position.x = distance_m * math.cos(theta)
+                wp.pose.position.y = distance_m * math.sin(theta)
+                wp.pose.position.z = 0.0
+                wp.pose.orientation.w = 1.0  # 简化的四元数
+                wp_msg = wp
+        else:
+            # 视野内没有地标，让底层走默认路点或停下
+            # 这里先不做任何处理，等待底层自主停下
+            pass
 
-        return cmd_msg
+        return cmd_override, wp_msg, semantic_msg
+

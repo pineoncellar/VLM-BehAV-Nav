@@ -6,7 +6,8 @@ import logging
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, PointCloud2
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, PoseStamped
+from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -125,7 +126,11 @@ class LandmarkDetectorNode(Node):
         )
         
         # 2. Control Interface / External Outputs
+
         self.cmd_pub = self.create_publisher(Twist, self.cmd_topic, 10)
+        self.waypoint_pub = self.create_publisher(PoseStamped, '/current_waypoint_local', 10)
+        self.rule_pub = self.create_publisher(String, '/semantic_behavior_rule', 10)
+
         self.behav_costmap_pub = self.create_publisher(Image, '/behav_costmap', 10)
         self.traj_image_pub = self.create_publisher(Image, '/traj_marked_image', 10)
 
@@ -194,9 +199,17 @@ class LandmarkDetectorNode(Node):
         """
         核心控制闭环（通过 Pipeline 下发调用获取最终决策层给出的速度包）
         """
-        msg = self.pipeline.compute_control_command()
-        self.cmd_pub.publish(msg)
-        self.dual_logger.debug(f"==> [ros_interface] Publishing CMD: {msg.linear.x}, {msg.angular.z}")
+        cmd_override, wp_msg, semantic_msg = self.pipeline.compute_control_command()
+        
+        if cmd_override is not None:
+            self.cmd_pub.publish(cmd_override)
+            self.dual_logger.debug(f"==> [ros_interface] Publishing CMD override: {cmd_override.linear.x}, {cmd_override.angular.z}")
+            
+        if wp_msg is not None:
+            self.waypoint_pub.publish(wp_msg)
+            
+        if semantic_msg is not None:
+            self.rule_pub.publish(semantic_msg)
 
 def run_instruction_pipeline():
     """测试用，可直接调用 Pipeline 单次测试 NLP 并获取行为 costs"""
