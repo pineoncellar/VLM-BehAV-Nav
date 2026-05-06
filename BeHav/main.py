@@ -83,11 +83,11 @@ class BehavMainPipeline:
         self.detector_core.navigation_landmarks = landmark_list or []
         self.detector_core.navigation_actions = navigation_action_list or []
 
-    def process_vision_cv2(self, cv_image):
+    def process_vision_cv2(self, cv_image, depth_image=None):
         """
-        传递给视觉追踪模块的 OpenCV 图像
+        传递给视觉追踪模块的 OpenCV 图像和深度图像
         """
-        self.detector_core.process_image(cv_image)
+        self.detector_core.process_image(cv_image, depth_image)
 
     def update_sensor_data(self, image_msg=None, pointcloud_msg=None, odom_msg=None):
         """

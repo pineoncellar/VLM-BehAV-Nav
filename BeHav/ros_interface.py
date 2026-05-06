@@ -84,6 +84,7 @@ class LandmarkDetectorNode(Node):
         
         # ROS节点定义
         self.image_topic = "/camera_sensor/image_raw"
+        self.depth_topic = "/camera_sensor/depth/image_raw"
         self.lidar_topic = "/velodyne_points"
         self.odom_topic = "/odom"
         self.cmd_topic = "/cmd_vel"
@@ -98,6 +99,12 @@ class LandmarkDetectorNode(Node):
             Image,
             self.image_topic,
             self.image_callback,
+            1
+        )
+        self.depth_sub = self.create_subscription(
+            Image,
+            self.depth_topic,
+            self.depth_callback,
             1
         )
         self.lidar_sub = self.create_subscription(
@@ -127,6 +134,7 @@ class LandmarkDetectorNode(Node):
         self.control_timer = self.create_timer(self.control_period_sec, self.control_loop)
         
         self.latest_image = None
+        self.latest_depth_image = None
         self.is_processing = False
 
     def image_callback(self, msg: Image):
@@ -148,6 +156,14 @@ class LandmarkDetectorNode(Node):
         except CvBridgeError as e:
             self.dual_logger.error(f'cv_bridge error: {str(e)}')
 
+    def depth_callback(self, msg: Image):
+        try:
+            # depth images from gazebo are often 32FC1
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
+            self.latest_depth_image = cv_image
+        except CvBridgeError as e:
+            self.dual_logger.error(f'cv_bridge depth error: {str(e)}')
+
     def lidar_callback(self, msg: PointCloud2):
         self.pipeline.update_sensor_data(pointcloud_msg=msg)
 
@@ -163,7 +179,8 @@ class LandmarkDetectorNode(Node):
         self.is_processing = True
         try:
             # Send latest image to vision landmark detector in pipeline
-            self.pipeline.process_vision_cv2(self.latest_image.copy())
+            depth_img = self.latest_depth_image.copy() if self.latest_depth_image is not None else None
+            self.pipeline.process_vision_cv2(self.latest_image.copy(), depth_image=depth_img)
         except Exception as e:
             self.dual_logger.error(f'process_image failed: {str(e)}')
         finally:

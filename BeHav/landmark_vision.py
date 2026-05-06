@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 from PIL import Image as PILImage
 import os
+import numpy as np
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,6 +27,24 @@ class LandmarkDetectorCore:
 
 
         self.navigation_landmarks = []
+
+        # ========= 新增 FastSAM 初始化 =========
+        from ultralytics import FastSAM
+        import torch
+
+        if self.logger:
+            self.logger.info('Initializing FastSAM model...')
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.fastsam_model = FastSAM("FastSAM-x.pt")
+        
+        # 相机内参配置
+        # 参考常见 Gazebo 内配，具体需要依照你在模型中的数值，否则测距存在偏差
+        self.intrinsics = {
+            'fx': 600.0,
+            'fy': 600.0,
+            'cx': 320.0,
+            'cy': 240.0,
+        }
 
         # ========= 从 .env 环境变量读取配置 =========
         self.api_key = os.getenv("LLM_API_KEY", "sk-e9d7e3da6d6240cd97b4d61af040415d")
@@ -137,6 +156,65 @@ class LandmarkDetectorCore:
             y = int((y_min + y_max) / 2)
         return x, y
 
+    def calculate_physical_distance(self, bbox, rgb_img, depth_img):
+        """
+        基于 FastSAM 掩膜提取和深度图中值的 3D 距离测算。
+        bbox 格式 [x_min, y_min, x_max, y_max]
+        """
+        # 第一步：FastSAM 掩膜生成
+        results = self.fastsam_model(
+            rgb_img,
+            device=self.device,
+            retina_masks=True,
+            conf=0.4,
+            iou=0.9,
+            bboxes=[bbox],
+            verbose=False
+        )
+        
+        if not results or not results[0].masks:
+            return None, None, None
+
+        mask = results[0].masks.data[0].cpu().numpy().astype(bool)
+
+        # 把掩膜大小缩放回原图大小
+        if mask.shape != rgb_img.shape[:2]:
+            mask = cv2.resize(mask.astype(np.uint8), (rgb_img.shape[1], rgb_img.shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
+
+        # 第二步：深度值提取与清洗
+        if depth_img is None:
+            return None, mask, None
+            
+        depths = depth_img[mask]
+        # 过滤无效深度点，Gazebo 激光/双目 很多空洞、或距离越界的点
+        valid_depths = depths[(depths > 0.0) & (depths < 100.0) & (~np.isnan(depths)) & (~np.isinf(depths))]
+        
+        if len(valid_depths) == 0:
+            return None, mask, None
+
+        # 第三步：统计中值与质心
+        z_median = np.median(valid_depths)
+        
+        y_indices, x_indices = np.where(mask)
+        u_c = np.mean(x_indices)
+        v_c = np.mean(y_indices)
+        
+        # 第四步：内参反投影计算真实距离
+        fx = self.intrinsics['fx']
+        fy = self.intrinsics['fy']
+        cx = self.intrinsics['cx']
+        cy = self.intrinsics['cy']
+        
+        # 针孔相机逆投影
+        X = (u_c - cx) * z_median / fx
+        Y = (v_c - cy) * z_median / fy
+        Z = z_median
+        
+        distance_d = float(np.sqrt(X**2 + Y**2 + Z**2))
+        centroid = (int(u_c), int(v_c))
+        
+        return distance_d, mask, centroid
+
     def maybe_advance_to_next_landmark(self, distance_m):
         if distance_m is None:
             return
@@ -162,10 +240,21 @@ class LandmarkDetectorCore:
                     existing_numbers.append(int(match.group(1)))
         return max(existing_numbers, default=0) + 1
 
-    def draw_detection_overlay(self, image_rgb, x_min, y_min, x_max, y_max, x, y):
+    def draw_detection_overlay(self, image_rgb, x_min, y_min, x_max, y_max, x, y, mask=None, real_distance=None):
         vis = image_rgb.copy()
+        
+        # 绘制半透明 Mask
+        if mask is not None:
+            color = np.array([255, 0, 0], dtype=np.uint8) # 红色遮罩
+            alpha = 0.5
+            vis[mask] = vis[mask] * (1 - alpha) + color * alpha
+            
         cv2.rectangle(vis, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (0, 255, 0), 2)
         cv2.circle(vis, (int(x), int(y)), 8, (255, 0, 0), -1)
+        
+        if real_distance is not None:
+            cv2.putText(vis, f"Dist: {real_distance:.2f}m", (int(x_min), int(max(0, y_min-10))), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
         return vis
 
     def save_images(self, original_img_rgb, circled_img_rgb):
@@ -319,7 +408,7 @@ class LandmarkDetectorCore:
     # ============================================================
     # 主流程
     # ============================================================
-    def process_image(self, image_bgr):
+    def process_image(self, image_bgr, depth_image=None):
         if self.logger: self.logger.info("Processing image...")  # 打印日志
         
         target_text = self.current_target_text()
@@ -376,14 +465,29 @@ class LandmarkDetectorCore:
         if y_min > y_max:
             y_min, y_max = y_max, y_min
 
-        x, y = self.bbox_to_target_point(x_min, y_min, x_max, y_max)
+        bbox = [x_min, y_min, x_max, y_max]
+
+        # 尝试使用 FastSAM 和深度图获取物理距离
+        real_distance, target_mask, centroid = None, None, None
+        if depth_image is not None:
+            real_distance, target_mask, centroid = self.calculate_physical_distance(bbox, image_rgb, depth_image)
+
+        if centroid:
+            x, y = centroid
+        else:
+            x, y = self.bbox_to_target_point(x_min, y_min, x_max, y_max)
 
         bearing = self.compute_bearing(x, w)
 
-        if self.use_vlm_distance and parsed["distance_m"] is not None:
+        if real_distance is not None:
+            distance_m = real_distance
+            if self.logger: self.logger.info(f"Using Z_median Real Distance: {distance_m:.2f} m")
+        elif self.use_vlm_distance and parsed["distance_m"] is not None:
             distance_m = float(parsed["distance_m"])
+            if self.logger: self.logger.info(f"Using VLM Estimated Distance: {distance_m:.2f} m")
         else:
             distance_m = self.default_distance_m
+            if self.logger: self.logger.info(f"Using Default Distance: {distance_m:.2f} m")
 
         self.latest_measurement = [distance_m, float(bearing)]
 
@@ -395,7 +499,7 @@ class LandmarkDetectorCore:
         self.logger.info('--------------------------------------------------')
 
         circled_img_rgb = self.draw_detection_overlay(
-            image_rgb, x_min, y_min, x_max, y_max, x, y
+            image_rgb, x_min, y_min, x_max, y_max, x, y, target_mask, real_distance
         )
 
         if self.save_debug_plot:
