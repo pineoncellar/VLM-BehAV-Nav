@@ -44,6 +44,10 @@ class DualLogger:
     def warn(self, msg):
         self.ros_logger.warn(msg)
         self.file_logger.warning(msg)
+    
+    def debug(self, msg):
+        self.ros_logger.debug(msg)
+        self.file_logger.debug(msg)
 
 class LandmarkDetectorNode(Node):
     """ros2 节点：整合视觉地标检测、指令分解与行为规划，提供 ROS 接口"""
@@ -138,14 +142,14 @@ class LandmarkDetectorNode(Node):
         self.is_processing = False
 
     def image_callback(self, msg: Image):
-        self.dual_logger.info('Received an image message')
+        self.dual_logger.debug('Received an image message')
         
         # 将原始 ros topic 数据发给 pipeline
         self.pipeline.update_sensor_data(image_msg=msg)
         
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
-            self.dual_logger.info(f"Image converted successfully, shape: {cv_image.shape}")
+            self.dual_logger.debug(f"Image converted successfully, shape: {cv_image.shape}")
             if msg.encoding == 'rgb8':
                 cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
             elif msg.encoding == 'bgr8':
@@ -192,7 +196,7 @@ class LandmarkDetectorNode(Node):
         """
         msg = self.pipeline.compute_control_command()
         self.cmd_pub.publish(msg)
-        self.dual_logger.info(f"==> [ros_interface] Publishing CMD: {msg.linear.x}, {msg.angular.z}")
+        self.dual_logger.debug(f"==> [ros_interface] Publishing CMD: {msg.linear.x}, {msg.angular.z}")
 
 def run_instruction_pipeline():
     """测试用，可直接调用 Pipeline 单次测试 NLP 并获取行为 costs"""
