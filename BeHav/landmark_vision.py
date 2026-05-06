@@ -208,34 +208,26 @@ class LandmarkDetectorCore:
     # ============================================================
     # VLM 查询
     # ============================================================
-    def compute_iou(self, boxA, boxB):
-        xA = max(boxA[0], boxB[0])
-        yA = max(boxA[1], boxB[1])
-        xB = min(boxA[2], boxB[2])
-        yB = min(boxA[3], boxB[3])
-        interArea = max(0, xB - xA) * max(0, yB - yA)
-        boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
-        boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
-        if float(boxAArea + boxBArea - interArea) <= 0.0: return 0.0
-        return interArea / float(boxAArea + boxBArea - interArea)
+    def compute_distance(self, pt1, pt2):
+        return math.hypot(pt1[0] - pt2[0], pt1[1] - pt2[1])
 
-    def query_vlm_for_bbox(self, original_image_rgb, target_text, ref_img_base64, gt_distance):
+    def query_vlm_for_point(self, original_image_rgb, target_text, ref_img_base64, gt_distance):
         h, w = original_image_rgb.shape[:2]
 
         prompt = dedent(f"""
             I have two images:
             1. A reference ground truth image of '{target_text}'.
-            2. A test image of size {w} width x {h} height without any annotations.
+            2. A test image.
 
             Tasks:
-            1. Is the target landmark visible in the test image?
-            2. If visible, find its bounding box in the test image. Return exact pixel coordinates [x_min, y_min, x_max, y_max].
+            1. Is the target landmark strictly visible in the test image?
+            2. If visible, find its exact center point. Return the relative coordinates [x_ratio, y_ratio] where 0.0 is top/left and 1.0 is bottom/right. (For example, [0.5, 0.5] is the exact center of the image).
             3. Estimate the camera distance from the landmark in the test image, based on the relative size compared to the {gt_distance}-meter ground truth image.
 
             Return exactly this JSON schema:
             {{
               "visible": true or false,
-              "bbox": [x_min, y_min, x_max, y_max] or null,
+              "point": [x_ratio, y_ratio] or null,
               "distance_m": number or null
             }}
         """).strip()
@@ -284,7 +276,7 @@ class LandmarkDetectorCore:
     def parse_vlm_response(self, response_text):
         result = {
             "visible": False,
-            "bbox": None,
+            "point": None,
             "distance_m": None,
             "raw": response_text
         }
@@ -300,7 +292,13 @@ class LandmarkDetectorCore:
         try:
             data = json.loads(cleaned)
             result["visible"] = bool(data.get("visible", False))
-            result["bbox"] = data.get("bbox", None)
+            if "point" in data:
+                result["point"] = data.get("point")
+            elif "bbox" in data:
+                # fallback if it still generated bbox
+                b = data.get("bbox")
+                if b and len(b) >= 4:
+                    result["point"] = [(b[0]+b[2])/2.0, (b[1]+b[3])/2.0]
             result["distance_m"] = data.get("distance_m", None)
             return result
         except Exception:
@@ -314,11 +312,11 @@ class LandmarkDetectorCore:
         if d_match and d_match.group(1).lower() != "null":
             result["distance_m"] = float(d_match.group(1))
 
-        bbox_match = re.search(r'"bbox"\s*:\s*\[([\d\.\s,]+)\]', cleaned, re.IGNORECASE)
-        if bbox_match:
-            nums = [float(x.strip()) for x in bbox_match.group(1).split(',')]
-            if len(nums) == 4:
-                result["bbox"] = nums
+        pt_match = re.search(r'"point"\s*:\s*\[([\d\.\s,]+)\]', cleaned, re.IGNORECASE)
+        if pt_match:
+            nums = [float(x.strip()) for x in pt_match.group(1).split(',')]
+            if len(nums) == 2:
+                result["point"] = nums
 
         return result
 
@@ -340,20 +338,6 @@ class LandmarkDetectorCore:
             
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         
-        # 运行 FastSAM 进行全图目标分割
-        results = self.fastsam_model(image_rgb, device=self.device, retina_masks=True, imgsz=1024, conf=0.4, iou=0.9)
-        
-        # 使用原生绘图并在掩膜中心画上数字编号，供VLM读取
-        masked_image = results[0].plot()
-        boxes = results[0].boxes.xyxy.cpu().numpy() if results[0].boxes else []
-        
-        for i, bbox in enumerate(boxes):
-            x1, y1, x2, y2 = bbox
-            cx, cy = int((x1 + x2)/2), int((y1 + y2)/2)
-            # 画序号，白底红字边以保证可见度
-            cv2.putText(masked_image, str(i), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 4, cv2.LINE_AA)
-            cv2.putText(masked_image, str(i), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2, cv2.LINE_AA)
-        
         # 读取基准图
         ref_img = cv2.imread(ref_info["image_path"])
         if ref_img is None:
@@ -362,24 +346,61 @@ class LandmarkDetectorCore:
         ref_img_rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
         ref_img_base64 = self.load_image(ref_img_rgb)
         
-        # 调用 VLM 获取对应的 mask_number 和 精确实例距离
-        response_text = self.query_fastsam_vlm(masked_image, target_text, ref_img_base64, ref_info["gt_distance"])
+        # 调用 VLM 在原图上获取物理目标的中心点坐标
+        response_text = self.query_vlm_for_point(image_rgb, target_text, ref_img_base64, ref_info["gt_distance"])
         if not response_text:
-            if self.logger: self.logger.error(f"Failed to get mask_number and distance for {target_text}")
+            if self.logger: self.logger.error(f"Failed to get point and distance for {target_text}")
             return
 
         parsed = self.parse_vlm_response(response_text)
-        if not parsed.get("visible") or parsed.get("mask_number") is None:
+        if not parsed.get("visible") or parsed.get("point") is None:
             if self.logger: 
-                self.logger.error(f"Target '{target_text}' not visible or mask not found. Raw VLM response: {response_text}")
+                self.logger.error(f"Target '{target_text}' not visible or point not found. Raw VLM response: {response_text}")
             return
 
-        # 从 FastSAM 的 merged_ann 字典中直接获取该数字对应的真实像素 Mask
-        target_mask_num = parsed["mask_number"]
+        vlm_point = parsed["point"]
+        # Convert relative point to absolute pixel coordinates
+        if vlm_point[0] <= 1.0 and vlm_point[1] <= 1.0:
+            target_pixel_x = vlm_point[0] * image_rgb.shape[1]
+            target_pixel_y = vlm_point[1] * image_rgb.shape[0]
+        else: # In case the model still returned raw pixels despite instructions
+            target_pixel_x = vlm_point[0]
+            target_pixel_y = vlm_point[1]
+            
+        target_pixel = (target_pixel_x, target_pixel_y)
+        
+        # 运行 FastSAM 进行全图目标分割
+        results = self.fastsam_model(image_rgb, device=self.device, retina_masks=True, imgsz=1024, conf=0.4, iou=0.9)
+        boxes = results[0].boxes.xyxy.cpu().numpy() if results[0].boxes else []
+        
+        # 寻找包含该 VLM 点，且面积最小（最精确）的 FastSAM Mask，如果都不包含则找中心距离最近的
+        target_mask_num = -1
+        min_area = float('inf')
+        min_dist = float('inf')
+        closest_mask_num = -1
+        
+        for i, bbox in enumerate(boxes):
+            x1, y1, x2, y2 = bbox
+            cx, cy = (x1 + x2)/2, (y1 + y2)/2
+            dist = self.compute_distance(target_pixel, (cx, cy))
+            if dist < min_dist:
+                min_dist = dist
+                closest_mask_num = i
+                
+            # Check if point is within this bbox
+            if x1 <= target_pixel_x <= x2 and y1 <= target_pixel_y <= y2:
+                area = (x2 - x1) * (y2 - y1)
+                if area < min_area:
+                    min_area = area
+                    target_mask_num = i
+        
+        # If strict inclusion fails, fallback to the closest bbox center
+        if target_mask_num < 0:
+            target_mask_num = closest_mask_num
         
         try:
-            if target_mask_num < 0 or target_mask_num >= len(boxes):
-                if self.logger: self.logger.error(f"Invalid mask number: {target_mask_num}")
+            if target_mask_num < 0:
+                if self.logger: self.logger.error(f"No mask could be matched near the VLM point {target_pixel}")
                 return
                 
             bbox = boxes[target_mask_num]
@@ -435,7 +456,7 @@ class LandmarkDetectorCore:
                         
                         distance_m = physical_distance_m
                     else:
-                        if self.logger: self.logger.warning("No valid depth values found in mask, falling back to VLM distance.")
+                        if self.logger: self.logger.warn("No valid depth values found in mask, falling back to VLM distance.")
             
             # 兜底防撞策略（视觉 looming）：如果长宽占比大于 70%，强制停车
             bbox_w_ratio = (x_max - x_min) / image_rgb.shape[1]
