@@ -361,7 +361,13 @@ class BehavPlannerCore:
         opt2.set_lower_bounds(lb)
         opt2.set_upper_bounds(ub)
         opt2.set_maxeval(30)
-        minf2 = opt2.optimize(minf)
+        try:
+            minf2 = opt2.optimize(minf)
+        except nlopt.RoundoffLimited:
+            minf2 = minf
+        except Exception as e:
+            print(f"NLopt optimization failed: {e}")
+            minf2 = minf
         
         coords = EgoPolar()
         coords.r = minf2[0]
