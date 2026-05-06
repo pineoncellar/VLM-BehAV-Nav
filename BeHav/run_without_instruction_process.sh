@@ -17,10 +17,10 @@ fi
 # ==============================================================
 export SKIP_NLP=1
 
-export PRESET_LANDMARKS='["blue car"]'
-export PRESET_NAV_ACTIONS='["walk to", "stop"]'
-export PRESET_BEHAV_ACTIONS='["stay on", "avoid"]'
-export PRESET_BEHAV_TARGETS='["pavement"]'
+export PRESET_LANDMARKS='["fire hydrant", "post office"]'
+export PRESET_NAV_ACTIONS='["go straight", "turn right", "keep walking", "stop"]'
+export PRESET_BEHAV_ACTIONS='["avoid stepping on", "walk on"]'
+export PRESET_BEHAV_TARGETS='["grass", "road"]'
 
 # 启动节点
 uv run python3 ros_interface.py
