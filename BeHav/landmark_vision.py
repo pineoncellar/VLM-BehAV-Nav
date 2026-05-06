@@ -11,6 +11,8 @@ import requests
 from requests.exceptions import RequestException
 import cv2
 import matplotlib.pyplot as plt
+import torch
+from ultralytics import FastSAM
 
 from PIL import Image as PILImage
 import os
@@ -35,6 +37,20 @@ class LandmarkDetectorCore:
         # 固定导航目标列表：按顺序执行
         # self.navigation_landmarks = ["traffic barrier", "library"]
         self.navigation_actions = ["go to", "then go to"]  # 保留但不参与计算
+
+        self.landmark_refs = {
+            "construction cone": {
+                "image_path": "./reference_images/ConstructionCone_7m.jpg",
+                "gt_distance": 7.0
+            },
+            "fire hydrant": {
+                "image_path": "./reference_images/fire_hydrant_10m.jpg",
+                "gt_distance": 10.0
+            }
+        }
+
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.fastsam_model = FastSAM("FastSAM-x.pt")
 
         # 只订阅图像
         self.image_topic = "/camera_sensor/image_raw"
@@ -191,49 +207,23 @@ class LandmarkDetectorCore:
     # ============================================================
     # VLM 查询
     # ============================================================
-    def query_target_bbox_and_distance(self, image_rgb, target_text):
-        # TODO:优化距离判断
-        h, w = image_rgb.shape[:2]
+    def query_fastsam_vlm(self, masked_image_rgb, target_text, ref_img_base64, gt_distance):
+        h, w = masked_image_rgb.shape[:2]
 
         prompt = dedent(f"""
-            You are given ONE outdoor scene image.
+            I have two images:
+            1. A ground truth image of '{target_text}' taken from a known distance of {gt_distance} meters.
+            2. A masked image with numbered masks, taken from an unknown distance.
 
-            Target landmark description:
-            "{target_text}"
-
-            Image size:
-            width = {w} pixels
-            height = {h} pixels
-
-            Pixel coordinate system:
-            - The origin (0, 0) is at the TOP-LEFT corner of the image
-            - x increases to the RIGHT
-            - y increases DOWNWARD
-
-            Your task:
-            1. Decide whether the target landmark is visible in the image.
-            2. If visible, return a TIGHT bounding box around the visible target landmark:
-               x_min, y_min, x_max, y_max
-            3. If visible, estimate the approximate camera-to-target distance in meters.
-
-            Important rules:
-            - x_min, y_min, x_max, and y_max MUST be integers normalized to the range [0, 1000]
-            - Do not return actual pixel values, output the relative coordinates mapped to [0, 1000]
-            - The box should tightly cover only the visible target landmark
-            - If the landmark is partially visible, box only the visible part
-            - If the target is not visible, set all coordinates and distance_m to null
-            - Do not guess the image center when uncertain
-            - Return JSON only
-            - Do not add markdown
-            - Do not add explanations
+            Tasks:
+            1. Is the target landmark visible in the second image?
+            2. If visible, identify the mask NUMBER containing the landmark.
+            3. Estimate the camera distance from the landmark in the test image, based on the relative size compared to the {gt_distance}-meter ground truth image.
 
             Return exactly this JSON schema:
             {{
               "visible": true or false,
-              "x_min": integer or null,
-              "y_min": integer or null,
-              "x_max": integer or null,
-              "y_max": integer or null,
+              "mask_number": integer or null,
               "distance_m": number or null
             }}
         """).strip()
@@ -242,6 +232,8 @@ class LandmarkDetectorCore:
             'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json'
         }
+
+        masked_img_base64 = self.load_image(masked_image_rgb)
 
         data = {
             "model": self.vlm_model,
@@ -253,7 +245,14 @@ class LandmarkDetectorCore:
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": self.load_image(image_rgb),
+                                "url": ref_img_base64,
+                                "detail": "high"
+                            }
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": masked_img_base64,
                                 "detail": "high"
                             }
                         }
@@ -273,10 +272,7 @@ class LandmarkDetectorCore:
     def parse_vlm_response(self, response_text):
         result = {
             "visible": False,
-            "x_min": None,
-            "y_min": None,
-            "x_max": None,
-            "y_max": None,
+            "mask_number": None,
             "distance_m": None,
             "raw": response_text
         }
@@ -292,10 +288,7 @@ class LandmarkDetectorCore:
         try:
             data = json.loads(cleaned)
             result["visible"] = bool(data.get("visible", False))
-            result["x_min"] = data.get("x_min", None)
-            result["y_min"] = data.get("y_min", None)
-            result["x_max"] = data.get("x_max", None)
-            result["y_max"] = data.get("y_max", None)
+            result["mask_number"] = data.get("mask_number", None)
             result["distance_m"] = data.get("distance_m", None)
             return result
         except Exception:
@@ -305,10 +298,9 @@ class LandmarkDetectorCore:
         if visible_match:
             result["visible"] = (visible_match.group(1).lower() == "true")
 
-        for key in ["x_min", "y_min", "x_max", "y_max"]:
-            m = re.search(rf'"{key}"\s*:\s*([0-9]+|null)', cleaned, re.IGNORECASE)
-            if m and m.group(1).lower() != "null":
-                result[key] = int(m.group(1))
+        m_match = re.search(r'"mask_number"\s*:\s*([0-9]+|null)', cleaned, re.IGNORECASE)
+        if m_match and m_match.group(1).lower() != "null":
+            result["mask_number"] = int(m_match.group(1))
 
         d_match = re.search(r'"distance_m"\s*:\s*([0-9]+(?:\.[0-9]+)?|null)', cleaned, re.IGNORECASE)
         if d_match and d_match.group(1).lower() != "null":
@@ -320,88 +312,97 @@ class LandmarkDetectorCore:
     # 主流程
     # ============================================================
     def process_image(self, image_bgr):
-        if self.logger: self.logger.info("Processing image...")  # 打印日志
+        if self.logger: self.logger.info("Processing image...")
         
         target_text = self.current_target_text()
         if not target_text:
             if self.logger: self.logger.info("No targets left to look for.")
             return
 
+        ref_info = self.landmark_refs.get(target_text)
+        if not ref_info:
+            if self.logger: self.logger.error(f"Missing reference data for {target_text}")
+            return
+            
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-
-        response_text = self.query_target_bbox_and_distance(
-            image_rgb=image_rgb,
-            target_text=target_text
-        )
+        
+        # 运行 FastSAM 进行全图目标分割
+        results = self.fastsam_model(image_rgb, device=self.device, retina_masks=True, imgsz=1024, conf=0.4, iou=0.9)
+        
+        # 使用原生绘图并在掩膜中心画上数字编号，供VLM读取
+        masked_image = results[0].plot()
+        boxes = results[0].boxes.xyxy.cpu().numpy() if results[0].boxes else []
+        
+        for i, bbox in enumerate(boxes):
+            x1, y1, x2, y2 = bbox
+            cx, cy = int((x1 + x2)/2), int((y1 + y2)/2)
+            # 画序号，白底红字边以保证可见度
+            cv2.putText(masked_image, str(i), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 4, cv2.LINE_AA)
+            cv2.putText(masked_image, str(i), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2, cv2.LINE_AA)
+        
+        # 读取基准图
+        ref_img = cv2.imread(ref_info["image_path"])
+        if ref_img is None:
+            if self.logger: self.logger.error(f"Failed to load reference image: {ref_info['image_path']}")
+            return
+        ref_img_rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
+        ref_img_base64 = self.load_image(ref_img_rgb)
+        
+        # 调用 VLM 获取对应的 mask_number 和 精确实例距离
+        response_text = self.query_fastsam_vlm(masked_image, target_text, ref_img_base64, ref_info["gt_distance"])
         if not response_text:
-            if self.logger: self.logger.error(f"Failed to get bounding box and distance for {target_text}")  # 错误日志
+            if self.logger: self.logger.error(f"Failed to get mask_number and distance for {target_text}")
             return
 
         parsed = self.parse_vlm_response(response_text)
-        if not parsed.get("visible"):
+        if not parsed.get("visible") or parsed.get("mask_number") is None:
             if self.logger: 
-                self.logger.error(f"Target '{target_text}' not visible or invalid response. Raw VLM response: {response_text}")
+                self.logger.error(f"Target '{target_text}' not visible or mask not found. Raw VLM response: {response_text}")
             return
 
-        if self.logger: self.logger.info(f"Target bbox: {parsed['x_min']}, {parsed['y_min']}, {parsed['x_max']}, {parsed['y_max']}")  # 打印bounding box
+        # 从 FastSAM 的 merged_ann 字典中直接获取该数字对应的真实像素 Mask
+        target_mask_num = parsed["mask_number"]
+        
+        try:
+            if target_mask_num < 0 or target_mask_num >= len(boxes):
+                if self.logger: self.logger.error(f"Invalid mask number: {target_mask_num}")
+                return
+                
+            bbox = boxes[target_mask_num]
+            x_min, y_min, x_max, y_max = bbox[0], bbox[1], bbox[2], bbox[3]
+            
+            x, y = self.bbox_to_target_point(x_min, y_min, x_max, y_max)
+            
+            distance_m = float(parsed["distance_m"]) if parsed["distance_m"] else self.default_distance_m
+            
+            # 兜底防撞策略（视觉 looming）：如果长宽占比大于 70%，强制停车
+            bbox_w_ratio = (x_max - x_min) / image_rgb.shape[1]
+            if bbox_w_ratio > 0.7:
+                distance_m = 0.0 # 强制让后续程序认为到达了
+                
+            bearing = self.compute_bearing(x, image_rgb.shape[1])
+            self.latest_measurement = [distance_m, float(bearing)]
+            
+            if self.logger:
+                self.logger.info('--------------------------------------------------')
+                self.logger.info(f'Current target         : {target_text}')
+                self.logger.info(f'Mask Number            : {target_mask_num}')
+                self.logger.info(f'BBox                   : [{x_min}, {y_min}, {x_max}, {y_max}]')
+                self.logger.info(f'Point used             : x={x}, y={y}')
+                self.logger.info(f'Distance / Angle(deg)  : {self.latest_measurement}')
+                self.logger.info('--------------------------------------------------')
 
-        needed = [
-            parsed["visible"],
-            parsed["x_min"] is not None,
-            parsed["y_min"] is not None,
-            parsed["x_max"] is not None,
-            parsed["y_max"] is not None
-        ]
-        if not all(needed):
-            self.latest_measurement = None
-            self.logger.info(f'[LandmarkDetector] target="{target_text}" not found')
-            return
-
-        h, w = image_rgb.shape[:2]
-
-        # 从 1000x1000 的归一化坐标系转换回原图的像素坐标
-        x_min_px = int(parsed["x_min"] * w / 1000.0)
-        y_min_px = int(parsed["y_min"] * h / 1000.0)
-        x_max_px = int(parsed["x_max"] * w / 1000.0)
-        y_max_px = int(parsed["y_max"] * h / 1000.0)
-
-        x_min = max(0, min(w - 1, x_min_px))
-        y_min = max(0, min(h - 1, y_min_px))
-        x_max = max(0, min(w - 1, x_max_px))
-        y_max = max(0, min(h - 1, y_max_px))
-
-        # 防止框顺序颠倒
-        if x_min > x_max:
-            x_min, x_max = x_max, x_min
-        if y_min > y_max:
-            y_min, y_max = y_max, y_min
-
-        x, y = self.bbox_to_target_point(x_min, y_min, x_max, y_max)
-
-        bearing = self.compute_bearing(x, w)
-
-        if self.use_vlm_distance and parsed["distance_m"] is not None:
-            distance_m = float(parsed["distance_m"])
-        else:
-            distance_m = self.default_distance_m
-
-        self.latest_measurement = [distance_m, float(bearing)]
-
-        self.logger.info('--------------------------------------------------')
-        self.logger.info(f'Current target         : {target_text}')
-        self.logger.info(f'BBox                   : [{x_min}, {y_min}, {x_max}, {y_max}]')
-        self.logger.info(f'Point used             : x={x}, y={y}')
-        self.logger.info(f'Distance / Angle(deg)  : {self.latest_measurement}')
-        self.logger.info('--------------------------------------------------')
-
-        circled_img_rgb = self.draw_detection_overlay(
-            image_rgb, x_min, y_min, x_max, y_max, x, y
-        )
-
-        if self.save_debug_plot:
-            self.save_images(
-                original_img_rgb=image_rgb,
-                circled_img_rgb=circled_img_rgb
+            circled_img_rgb = self.draw_detection_overlay(
+                image_rgb, x_min, y_min, x_max, y_max, x, y
             )
 
-        self.maybe_advance_to_next_landmark(distance_m)
+            if self.save_debug_plot:
+                self.save_images(
+                    original_img_rgb=image_rgb,
+                    circled_img_rgb=circled_img_rgb
+                )
+
+            self.maybe_advance_to_next_landmark(distance_m)
+
+        except Exception as e:
+            if self.logger: self.logger.error(f"Error extracting mask {target_mask_num}: {e}")
