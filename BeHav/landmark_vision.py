@@ -7,6 +7,7 @@ import json
 import base64
 from textwrap import dedent
 
+import numpy as np
 import requests
 from requests.exceptions import RequestException
 import cv2
@@ -207,23 +208,34 @@ class LandmarkDetectorCore:
     # ============================================================
     # VLM 查询
     # ============================================================
-    def query_fastsam_vlm(self, masked_image_rgb, target_text, ref_img_base64, gt_distance):
-        h, w = masked_image_rgb.shape[:2]
+    def compute_iou(self, boxA, boxB):
+        xA = max(boxA[0], boxB[0])
+        yA = max(boxA[1], boxB[1])
+        xB = min(boxA[2], boxB[2])
+        yB = min(boxA[3], boxB[3])
+        interArea = max(0, xB - xA) * max(0, yB - yA)
+        boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
+        boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
+        if float(boxAArea + boxBArea - interArea) <= 0.0: return 0.0
+        return interArea / float(boxAArea + boxBArea - interArea)
+
+    def query_vlm_for_bbox(self, original_image_rgb, target_text, ref_img_base64, gt_distance):
+        h, w = original_image_rgb.shape[:2]
 
         prompt = dedent(f"""
             I have two images:
-            1. A ground truth image of '{target_text}' taken from a known distance of {gt_distance} meters.
-            2. A masked image with numbered masks, taken from an unknown distance.
+            1. A reference ground truth image of '{target_text}'.
+            2. A test image of size {w} width x {h} height without any annotations.
 
             Tasks:
-            1. Is the target landmark visible in the second image?
-            2. If visible, identify the mask NUMBER containing the landmark.
+            1. Is the target landmark visible in the test image?
+            2. If visible, find its bounding box in the test image. Return exact pixel coordinates [x_min, y_min, x_max, y_max].
             3. Estimate the camera distance from the landmark in the test image, based on the relative size compared to the {gt_distance}-meter ground truth image.
 
             Return exactly this JSON schema:
             {{
               "visible": true or false,
-              "mask_number": integer or null,
+              "bbox": [x_min, y_min, x_max, y_max] or null,
               "distance_m": number or null
             }}
         """).strip()
@@ -233,7 +245,7 @@ class LandmarkDetectorCore:
             'Content-Type': 'application/json'
         }
 
-        masked_img_base64 = self.load_image(masked_image_rgb)
+        masked_img_base64 = self.load_image(original_image_rgb)
 
         data = {
             "model": self.vlm_model,
@@ -272,7 +284,7 @@ class LandmarkDetectorCore:
     def parse_vlm_response(self, response_text):
         result = {
             "visible": False,
-            "mask_number": None,
+            "bbox": None,
             "distance_m": None,
             "raw": response_text
         }
@@ -288,7 +300,7 @@ class LandmarkDetectorCore:
         try:
             data = json.loads(cleaned)
             result["visible"] = bool(data.get("visible", False))
-            result["mask_number"] = data.get("mask_number", None)
+            result["bbox"] = data.get("bbox", None)
             result["distance_m"] = data.get("distance_m", None)
             return result
         except Exception:
@@ -298,20 +310,22 @@ class LandmarkDetectorCore:
         if visible_match:
             result["visible"] = (visible_match.group(1).lower() == "true")
 
-        m_match = re.search(r'"mask_number"\s*:\s*([0-9]+|null)', cleaned, re.IGNORECASE)
-        if m_match and m_match.group(1).lower() != "null":
-            result["mask_number"] = int(m_match.group(1))
-
         d_match = re.search(r'"distance_m"\s*:\s*([0-9]+(?:\.[0-9]+)?|null)', cleaned, re.IGNORECASE)
         if d_match and d_match.group(1).lower() != "null":
             result["distance_m"] = float(d_match.group(1))
+
+        bbox_match = re.search(r'"bbox"\s*:\s*\[([\d\.\s,]+)\]', cleaned, re.IGNORECASE)
+        if bbox_match:
+            nums = [float(x.strip()) for x in bbox_match.group(1).split(',')]
+            if len(nums) == 4:
+                result["bbox"] = nums
 
         return result
 
     # ============================================================
     # 主流程
     # ============================================================
-    def process_image(self, image_bgr):
+    def process_image(self, image_bgr, depth_image=None):
         if self.logger: self.logger.info("Processing image...")
         
         target_text = self.current_target_text()
@@ -373,7 +387,55 @@ class LandmarkDetectorCore:
             
             x, y = self.bbox_to_target_point(x_min, y_min, x_max, y_max)
             
+            # ===== 从深度图计算物理距离 =====
             distance_m = float(parsed["distance_m"]) if parsed["distance_m"] else self.default_distance_m
+            
+            if depth_image is not None and results[0].masks is not None and len(results[0].masks) > target_mask_num:
+                polygon = results[0].masks.xy[target_mask_num]
+                if len(polygon) > 0:
+                    raw_mask = np.zeros((depth_image.shape[0], depth_image.shape[1]), dtype=np.uint8)
+                    cv2.fillPoly(raw_mask, [np.array(polygon, dtype=np.int32)], 1)
+                    
+                    mask_indices = np.where(raw_mask > 0)
+                    valid_depths = depth_image[mask_indices]
+                    
+                    # 筛选出有效深度值 (排除NaN和<=0的情况)
+                    valid_mask = (valid_depths > 0) & (~np.isnan(valid_depths)) & (~np.isinf(valid_depths))
+                    valid_depths = valid_depths[valid_mask]
+                    
+                    if len(valid_depths) > 0:
+                        # 取深度中位数作为 Z
+                        z_median = float(np.nanmedian(valid_depths))
+                        
+                        us = mask_indices[1][valid_mask] 
+                        vs = mask_indices[0][valid_mask] 
+                        
+                        image_width = image_rgb.shape[1]
+                        image_height = image_rgb.shape[0]
+                        cx = (image_width - 1) / 2.0
+                        cy = (image_height - 1) / 2.0
+                        
+                        half_fov_rad = math.radians(self.horizontal_fov_deg / 2.0)
+                        fx = cx / math.tan(half_fov_rad)
+                        fy = fx
+                        
+                        # 反投影求 X, Y 平均值
+                        xs = (us - cx) * valid_depths / fx
+                        ys = (vs - cy) * valid_depths / fy
+                        
+                        x_mean = float(np.mean(xs))
+                        y_mean = float(np.mean(ys))
+                        
+                        # 欧几里得测距
+                        physical_distance_m = math.sqrt(x_mean**2 + y_mean**2 + z_median**2)
+                        
+                        if self.logger:
+                            self.logger.info(f"Depth projection computed! Z_median: {z_median:.2f}, X_mean: {x_mean:.2f}, Y_mean: {y_mean:.2f}")
+                            self.logger.info(f"Physical Euclidean distance (overriding VLM distance): {physical_distance_m:.2f}m")
+                        
+                        distance_m = physical_distance_m
+                    else:
+                        if self.logger: self.logger.warning("No valid depth values found in mask, falling back to VLM distance.")
             
             # 兜底防撞策略（视觉 looming）：如果长宽占比大于 70%，强制停车
             bbox_w_ratio = (x_max - x_min) / image_rgb.shape[1]
