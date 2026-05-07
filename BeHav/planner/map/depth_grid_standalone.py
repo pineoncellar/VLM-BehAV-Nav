@@ -40,8 +40,6 @@ from rclpy.time import Time
 
 from sensor_msgs.msg import Image, CameraInfo
 from nav_msgs.msg import OccupancyGrid
-from std_msgs.msg import String
-import json
 from tf2_ros import Buffer, TransformListener
 
 try:
@@ -173,13 +171,6 @@ class DepthGridStandalone(Node):
         self.latest_rgb_msg = None
         self.semantic_timer = None
         if args.enable_clipseg:
-            self.rule_sub = self.create_subscription(
-                String,
-                '/semantic_behavior_rule',
-                self.behavior_rule_callback,
-                1
-            )
-
             if ClipsegSemanticFuser is None:
                 raise RuntimeError("clipseg_semantic_fuser.py could not be imported")
             self.semantic_fuser = ClipsegSemanticFuser(
@@ -254,19 +245,6 @@ class DepthGridStandalone(Node):
         if self.semantic_fuser is None:
             return
         self.latest_rgb_msg = msg
-
-
-    def behavior_rule_callback(self, msg: String) -> None:
-        try:
-            data_dict = json.loads(msg.data)
-            prompts = data_dict.get("prompts", [])
-            rule = data_dict.get("rule", "")
-            if self.semantic_fuser:
-                self.semantic_fuser.prompts = prompts
-                self.semantic_fuser.behavior_rule = rule
-                self.get_logger().info(f"Dynamically updated semantics: {prompts} -> {rule}")
-        except Exception as e:
-            self.get_logger().error(f"Failed to parse /semantic_behavior_rule: {e}")
 
     def clipseg_timer_callback(self) -> None:
         """Run CLIPSeg at a lower fixed rate to avoid blocking every depth frame."""

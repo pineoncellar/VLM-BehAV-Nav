@@ -11,16 +11,19 @@ Put it in:
 Inputs:
   /local_traversability_grid      nav_msgs/msg/OccupancyGrid
   /current_waypoint_local         geometry_msgs/msg/PoseStamped
+  /far_local_plan                 nav_msgs/msg/Path, optional guide path from far planner
 
 Outputs:
   /local_selected_trajectory      nav_msgs/msg/Path
   /local_candidate_trajectories   nav_msgs/msg/Path, optional debug visualization
+  /local_planner_ok               std_msgs/msg/Bool
 
 Core idea copied from CMU-style local planner:
   - Do NOT choose directly among every single trajectory.
   - Generate many candidate paths, but assign them into 7 direction groups.
   - Each safe candidate path votes for its group.
   - Select the best group.
+  - Prefer paths that stay close to /far_local_plan.
   - Publish the representative path of that selected group.
   - If representative is unsafe, publish the safest backup inside that group.
   - Use group-level hysteresis, not single-path sticky locking.
@@ -48,9 +51,9 @@ import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PoseArray
 from nav_msgs.msg import OccupancyGrid, Path
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 
 
 @dataclass
@@ -87,6 +90,37 @@ class PathEval:
     reason: str
 
 
+@dataclass
+class CandidatePath:
+    candidate_id: str
+    source: str                 # "reference" or "rollout"
+    group_id: int               # -1 for reference path
+    rollout: Optional[Rollout]
+    points: np.ndarray          # N x 3: x, y, yaw
+
+
+@dataclass
+class ArbiterEval:
+    candidate: CandidatePath
+    safe: bool
+    reason: str
+    mode_hint: str
+    total_cost: float
+    mean_ref_dist: float
+    max_ref_dist: float
+    endpoint_ref_dist: float
+    queue_cost: float
+    progress_s: float
+    clearance_cost: float
+    unknown_cost: float
+    smooth_cost: float
+    curvature_cost: float
+    occupied_hits: int
+    near_unknown_hits: int
+    footprint_occupied_hits: int
+    footprint_near_unknown_hits: int
+
+
 class LocalRolloutSelector(Node):
     def __init__(self, args):
         parameter_overrides = []
@@ -98,11 +132,25 @@ class LocalRolloutSelector(Node):
 
         self.current_waypoint_local: Optional[Tuple[float, float]] = None
         self.last_waypoint_wall_time: float = 0.0
+
+        # FAR route contract.
+        self.far_path_xy: Optional[np.ndarray] = None
+        self.last_far_path_wall_time: float = 0.0
+        self.waypoint_queue_xy: Optional[np.ndarray] = None
+        self.last_waypoint_queue_wall_time: float = 0.0
+        self.current_subgoal_local: Optional[Tuple[float, float]] = None
+        self.last_current_subgoal_wall_time: float = 0.0
+        self.far_route_status: str = "UNKNOWN"
+
         self.goal_reached: bool = False
 
         self.selected_group_id: Optional[int] = None
         self.selected_rollout_id: Optional[int] = None
+        self.selected_candidate_id: Optional[str] = None
         self.last_selected_rollout: Optional[Rollout] = None
+        self.last_selected_path_points: Optional[np.ndarray] = None
+        self.last_selected_eval: Optional[ArbiterEval] = None
+        self.local_mode: str = "INIT"
         self.no_valid_plan_count: int = 0
         self.group_scores_ema = np.zeros(7, dtype=np.float32)
         self.group_scores_ema_ready: bool = False
@@ -133,6 +181,36 @@ class LocalRolloutSelector(Node):
             self.waypoint_callback,
             10,
         )
+        self.far_path_sub = self.create_subscription(
+            Path,
+            args.far_local_plan_topic,
+            self.far_path_callback,
+            10,
+        )
+        self.reference_path_sub = self.create_subscription(
+            Path,
+            args.reference_path_topic,
+            self.reference_path_callback,
+            10,
+        )
+        self.waypoint_queue_sub = self.create_subscription(
+            PoseArray,
+            args.waypoint_queue_topic,
+            self.waypoint_queue_callback,
+            10,
+        )
+        self.current_subgoal_sub = self.create_subscription(
+            PoseStamped,
+            args.current_subgoal_topic,
+            self.current_subgoal_callback,
+            10,
+        )
+        self.route_status_sub = self.create_subscription(
+            String,
+            args.route_status_topic,
+            self.route_status_callback,
+            10,
+        )
         self.goal_reached_sub = self.create_subscription(
             Bool,
             args.far_goal_reached_topic,
@@ -143,15 +221,22 @@ class LocalRolloutSelector(Node):
         self.selected_pub = self.create_publisher(Path, args.selected_path_topic, 10)
         self.candidates_pub = self.create_publisher(Path, args.candidate_paths_topic, 10)
         self.local_ok_pub = self.create_publisher(Bool, args.local_planner_ok_topic, 10)
+        self.local_status_pub = self.create_publisher(String, args.local_status_topic, 10)
 
         self.get_logger().info("local_rollout_selector.py started")
         self.get_logger().info(f"grid_topic       : {args.grid_topic}")
         self.get_logger().info(f"waypoint_topic   : {args.current_waypoint_local_topic}")
+        self.get_logger().info(f"far_path_topic   : {args.far_local_plan_topic}")
+        self.get_logger().info(f"reference_path   : {args.reference_path_topic}")
+        self.get_logger().info(f"waypoint_queue   : {args.waypoint_queue_topic}")
+        self.get_logger().info(f"current_subgoal  : {args.current_subgoal_topic}")
+        self.get_logger().info(f"route_status     : {args.route_status_topic}")
         self.get_logger().info(f"selected_path    : {args.selected_path_topic}")
         self.get_logger().info(f"local_ok_topic   : {args.local_planner_ok_topic}")
+        self.get_logger().info(f"local_status     : {args.local_status_topic}")
         self.get_logger().info(f"group_count      : 7")
         self.get_logger().info(f"candidate count  : {len(self.rollouts)}")
-        self.get_logger().info("selection        : CMU-like group score + representative path")
+        self.get_logger().info("selection        : safety-first FAR route tube arbiter + rollout fallback")
         self.get_logger().info("vehicle control  : disabled")
 
     # ------------------------------------------------------------------
@@ -162,12 +247,60 @@ class LocalRolloutSelector(Node):
         self.current_waypoint_local = (float(msg.pose.position.x), float(msg.pose.position.y))
         self.last_waypoint_wall_time = time.time()
 
+    def far_path_callback(self, msg: Path) -> None:
+        pts = []
+        for pose_stamped in msg.poses:
+            p = pose_stamped.pose.position
+            pts.append((float(p.x), float(p.y)))
+
+        if len(pts) < 2:
+            self.far_path_xy = None
+            return
+
+        xy = np.asarray(pts, dtype=np.float32)
+        keep = [0]
+        for i in range(1, len(xy)):
+            if np.linalg.norm(xy[i] - xy[keep[-1]]) > self.args.far_path_min_point_gap:
+                keep.append(i)
+
+        if len(keep) < 2:
+            self.far_path_xy = None
+            return
+
+        self.far_path_xy = xy[keep]
+        self.last_far_path_wall_time = time.time()
+
+    def reference_path_callback(self, msg: Path) -> None:
+        # Prefer the clean V6 topic. Internally it uses the same reference array.
+        self.far_path_callback(msg)
+
+    def waypoint_queue_callback(self, msg: PoseArray) -> None:
+        pts = []
+        for pose in msg.poses:
+            pts.append((float(pose.position.x), float(pose.position.y)))
+        if not pts:
+            self.waypoint_queue_xy = None
+            return
+        self.waypoint_queue_xy = np.asarray(pts, dtype=np.float32)
+        self.last_waypoint_queue_wall_time = time.time()
+
+    def current_subgoal_callback(self, msg: PoseStamped) -> None:
+        self.current_subgoal_local = (float(msg.pose.position.x), float(msg.pose.position.y))
+        self.last_current_subgoal_wall_time = time.time()
+
+    def route_status_callback(self, msg: String) -> None:
+        self.far_route_status = str(msg.data)
+
     def goal_reached_callback(self, msg: Bool) -> None:
         self.goal_reached = bool(msg.data)
         if self.goal_reached:
             self.selected_group_id = None
             self.selected_rollout_id = None
+            self.selected_candidate_id = None
             self.last_selected_rollout = None
+            self.last_selected_path_points = None
+            self.last_selected_eval = None
+            self.local_mode = "RECOVERY_STOP"
             self.no_valid_plan_count = 0
             self.group_scores_ema_ready = False
 
@@ -208,22 +341,32 @@ class LocalRolloutSelector(Node):
             self.publish_local_ok(False)
             return
 
-        selected = self.select_by_group_score(grid, info)
-        if selected is None:
-            self.get_logger().warn("No valid group/path selected. Publishing empty path.")
+        has_valid_waypoint = self.current_waypoint_local is not None and (time.time() - getattr(self, 'last_waypoint_wall_time', 0)) <= self.args.waypoint_timeout
+        if not has_valid_waypoint and self.get_active_reference_path() is None:
             self.publish_empty_path(msg.header.stamp, info.frame_id)
             self.publish_local_ok(False)
             return
 
-        self.publish_rollout(selected, msg.header.stamp, info.frame_id)
+        ev = self.select_by_arbiter(grid, info)
+        if ev is None:
+            self.get_logger().warn("No valid arbiter candidate selected. Publishing empty path.")
+            self.publish_empty_path(msg.header.stamp, info.frame_id)
+            self.publish_local_ok(False)
+            self.publish_local_status("RECOVERY_STOP")
+            return
+
+        self.publish_candidate(ev.candidate, msg.header.stamp, info.frame_id)
         self.publish_local_ok(True)
+        self.publish_local_status(self.local_mode)
 
         self.plan_count += 1
         if self.plan_count % max(1, self.args.print_every) == 0:
             wp_text = "none" if self.current_waypoint_local is None else f"({self.current_waypoint_local[0]:.2f},{self.current_waypoint_local[1]:.2f})"
             self.get_logger().info(
-                f"selected group={selected.group_id}, family={selected.family}, rep={selected.is_representative}, "
-                f"y_peak={selected.y_peak:.2f}, y_end={selected.y_end:.2f}, waypoint={wp_text}"
+                f"arbiter mode={self.local_mode}, selected={ev.candidate.candidate_id}, "
+                f"source={ev.candidate.source}, cost={ev.total_cost:.2f}, "
+                f"mean_ref={ev.mean_ref_dist:.2f}, max_ref={ev.max_ref_dist:.2f}, "
+                f"queue={ev.queue_cost:.2f}, progress={ev.progress_s:.2f}, waypoint={wp_text}"
             )
 
     # ------------------------------------------------------------------
@@ -264,7 +407,7 @@ class LocalRolloutSelector(Node):
         traj_id = 0
 
         for gid in range(7):
-            gy = group_y[gid]
+            gy = self.clamp(group_y[gid], -self.args.max_lateral_offset, self.args.max_lateral_offset)
 
             # 1) Representative direct path for the group.
             points = self.make_direct_rollout(L, gy)
@@ -302,8 +445,9 @@ class LocalRolloutSelector(Node):
 
             # 3) Recovery variants: avoid in the group's direction, then come back.
             # For center group, include mild left/right recoveries.
+            max_r = self.args.max_lateral_offset
             if gid == 3:
-                recover_peaks = [-1.0, 1.0]
+                recover_peaks = [-min(1.0, max_r), min(1.0, max_r)]
             else:
                 recover_peaks = [gy, self.clamp(gy * 1.15, -self.args.max_lateral_offset, self.args.max_lateral_offset)]
 
@@ -371,6 +515,548 @@ class LocalRolloutSelector(Node):
 
         offsets.extend([(-half, -half), (-half, half), (half, -half), (half, half), (0.0, 0.0)])
         return np.asarray(offsets, dtype=np.float32)
+
+    # ------------------------------------------------------------------
+    # Safety-first FAR / rollout arbiter
+    # ------------------------------------------------------------------
+
+    def select_by_arbiter(self, grid: np.ndarray, info: GridInfo) -> Optional[ArbiterEval]:
+        candidates = self.build_candidate_pool()
+        if not candidates:
+            self.no_valid_plan_count += 1
+            return self.hold_last_eval_if_allowed()
+
+        evals = [self.evaluate_candidate_for_arbiter(c, grid, info) for c in candidates]
+        safe = [e for e in evals if e.safe]
+
+        if not safe:
+            if self.args.debug_rejections:
+                reasons = {}
+                for e in evals:
+                    reasons[e.reason] = reasons.get(e.reason, 0) + 1
+                self.get_logger().warn("arbiter unsafe candidates: " + ", ".join([f"{k}={v}" for k, v in reasons.items()]))
+            
+            # Escape mechanism: if we are trapped (e.g. partly on semantic grass),
+            # choose the path with the minimal total_cost (which includes clearance_cost).
+            self.get_logger().warn("All paths unsafe. Engaging RECOVERY_ESCAPE mode.")
+            best_unsafe = min(evals, key=lambda e: e.total_cost)
+            
+            # Only allow it if we are consistently stuck, to avoid plunging into walls dynamically.
+            # But the easiest is just picking it to crawl out of the grass.
+            if best_unsafe is not None:
+                self.local_mode = "RECOVERY_ESCAPE"
+                self.no_valid_plan_count = 0
+                self.selected_candidate_id = best_unsafe.candidate.candidate_id
+                return best_unsafe
+                
+            self.no_valid_plan_count += 1
+            return self.hold_last_eval_if_allowed()
+
+        # Hard hierarchy:
+        # 1. If there are safe candidates inside the FAR route tube, only choose among them.
+        # 2. Otherwise choose an AVOID_LOCAL candidate that maximizes progress and can rejoin.
+        in_tube = [
+            e for e in safe
+            if e.mean_ref_dist <= self.args.route_tube_radius
+            and e.max_ref_dist <= self.args.route_tube_max_deviation
+            and e.progress_s >= self.args.min_route_progress
+        ]
+
+        if in_tube:
+            pool = in_tube
+            target_mode = "FOLLOW_REF"
+        else:
+            pool = safe
+            target_mode = "AVOID_LOCAL"
+
+        best = min(pool, key=lambda e: e.total_cost)
+
+        # Sticky candidate hysteresis: do not switch unless clearly better.
+        old_eval = None
+        if self.selected_candidate_id is not None:
+            for e in safe:
+                if e.candidate.candidate_id == self.selected_candidate_id:
+                    old_eval = e
+                    break
+
+        if old_eval is not None:
+            old_allowed = True
+            if target_mode == "FOLLOW_REF":
+                old_allowed = (
+                    old_eval.mean_ref_dist <= self.args.route_tube_max_deviation
+                    and old_eval.progress_s >= self.args.min_route_progress
+                )
+            if old_allowed and (old_eval.total_cost - best.total_cost) <= self.args.arbiter_switch_margin:
+                best = old_eval
+
+        self.local_mode = target_mode
+        self.no_valid_plan_count = 0
+        self.selected_candidate_id = best.candidate.candidate_id
+        self.last_selected_path_points = best.candidate.points.copy()
+        self.last_selected_eval = best
+
+        if best.candidate.rollout is not None:
+            self.selected_rollout_id = best.candidate.rollout.traj_id
+            self.selected_group_id = best.candidate.rollout.group_id
+            self.last_selected_rollout = best.candidate.rollout
+        else:
+            self.selected_rollout_id = None
+            self.last_selected_rollout = None
+
+        return best
+
+    def hold_last_eval_if_allowed(self) -> Optional[ArbiterEval]:
+        if (
+            self.last_selected_eval is not None
+            and self.no_valid_plan_count <= self.args.max_hold_last_path_frames
+        ):
+            self.local_mode = "HOLD_LAST"
+            return self.last_selected_eval
+        self.selected_candidate_id = None
+        self.last_selected_eval = None
+        self.last_selected_path_points = None
+        self.local_mode = "RECOVERY_STOP"
+        return None
+
+    def build_candidate_pool(self) -> List[CandidatePath]:
+        candidates: List[CandidatePath] = []
+
+        ref = self.get_active_reference_path()
+        if ref is not None and len(ref) >= 2:
+            ref_pts = self.prepare_reference_candidate(ref)
+            if ref_pts is not None and len(ref_pts) >= 2:
+                candidates.append(CandidatePath(
+                    candidate_id="reference:0",
+                    source="reference",
+                    group_id=-1,
+                    rollout=None,
+                    points=ref_pts,
+                ))
+
+        for r in self.rollouts:
+            candidates.append(CandidatePath(
+                candidate_id=f"rollout:{r.traj_id}",
+                source="rollout",
+                group_id=r.group_id,
+                rollout=r,
+                points=r.points,
+            ))
+
+        return candidates
+
+    def get_active_reference_path(self) -> Optional[np.ndarray]:
+        if self.far_path_xy is None or len(self.far_path_xy) < 2:
+            return None
+        if time.time() - self.last_far_path_wall_time > self.args.far_path_timeout:
+            return None
+        return self.far_path_xy
+
+    def get_active_waypoint_queue(self) -> Optional[np.ndarray]:
+        if self.waypoint_queue_xy is not None and len(self.waypoint_queue_xy) > 0:
+            if time.time() - self.last_waypoint_queue_wall_time <= self.args.waypoint_queue_timeout:
+                return self.waypoint_queue_xy
+
+        # Fallback: current subgoal or current waypoint as one-point queue.
+        if self.current_subgoal_local is not None:
+            if time.time() - self.last_current_subgoal_wall_time <= self.args.waypoint_queue_timeout:
+                return np.asarray([self.current_subgoal_local], dtype=np.float32)
+
+        if self.current_waypoint_local is not None:
+            if time.time() - self.last_waypoint_wall_time <= self.args.waypoint_timeout:
+                return np.asarray([self.current_waypoint_local], dtype=np.float32)
+
+        return None
+
+    def prepare_reference_candidate(self, ref_xy: np.ndarray) -> Optional[np.ndarray]:
+        pts = np.asarray(ref_xy, dtype=np.float32)
+        if len(pts) < 2:
+            return None
+
+        # Ensure local trajectory starts at the vehicle origin.
+        if float(np.linalg.norm(pts[0])) > self.args.ref_prepend_origin_distance:
+            pts = np.vstack([np.asarray([[0.0, 0.0]], dtype=np.float32), pts])
+
+        # Clip to trusted local range and length.
+        clipped = [pts[0]]
+        total = 0.0
+        for i in range(1, len(pts)):
+            a = clipped[-1]
+            b = pts[i]
+            if b[0] < self.args.ref_min_x:
+                continue
+            if b[0] > self.args.ref_max_x:
+                break
+            if abs(float(b[1])) > self.args.ref_y_limit:
+                break
+
+            seg = float(np.linalg.norm(b - a))
+            if total + seg > self.args.ref_max_length:
+                ratio = (self.args.ref_max_length - total) / max(seg, 1e-6)
+                clipped.append(a + ratio * (b - a))
+                break
+            clipped.append(b)
+            total += seg
+
+        if len(clipped) < 2:
+            return None
+
+        xy = self.resample_polyline(np.asarray(clipped, dtype=np.float32), self.args.ref_publish_step)
+        xy = self.smooth_polyline(xy, self.args.ref_smoothing_passes)
+        yaws = self.polyline_yaws(xy)
+        return np.column_stack([xy[:, 0], xy[:, 1], yaws]).astype(np.float32)
+
+    def evaluate_candidate_for_arbiter(
+        self,
+        candidate: CandidatePath,
+        grid: np.ndarray,
+        info: GridInfo,
+    ) -> ArbiterEval:
+        safety = self.check_candidate_safety(candidate.points, grid, info)
+
+        ref_xy = self.get_active_reference_path()
+        q_xy = self.get_active_waypoint_queue()
+
+        mean_ref, max_ref, endpoint_ref, progress_s = self.reference_metrics(candidate.points[:, :2], ref_xy)
+        queue_cost = self.queue_tracking_cost(candidate.points[:, :2], q_xy)
+        smooth_cost = self.switch_smoothness_cost(candidate.points[:, :2])
+        curvature_cost = self.curvature_cost(candidate.points)
+        clearance_cost = safety["clearance_cost"]
+        unknown_cost = safety["unknown_cost"]
+
+        # Progress cost is negative reward, but bounded to avoid dominating safety/path matching.
+        progress_cost = -self.args.progress_reward_weight * min(progress_s, self.args.progress_reward_cap)
+
+        total = 0.0
+        total += self.args.ref_mean_weight * mean_ref
+        total += self.args.ref_max_weight * max_ref
+        total += self.args.ref_endpoint_weight * endpoint_ref
+        total += self.args.queue_weight * queue_cost
+        total += progress_cost
+        total += self.args.clearance_weight * clearance_cost
+        total += self.args.unknown_cost_weight * unknown_cost
+        total += self.args.switch_smooth_weight * smooth_cost
+        total += self.args.curvature_weight * curvature_cost
+
+        # Strong but not absolute preference for the reference candidate when it is safe.
+        if candidate.source == "reference":
+            total -= self.args.reference_candidate_bonus
+
+        # Avoid mode should prefer candidates that end closer to the route.
+        if mean_ref > self.args.route_tube_radius:
+            total += self.args.rejoin_weight * endpoint_ref
+
+        if candidate.rollout is not None:
+            # Mildly discourage extreme lateral rollouts unless needed.
+            total += self.args.rollout_shape_weight * abs(candidate.rollout.y_peak)
+
+        mode_hint = "FOLLOW_REF" if (
+            mean_ref <= self.args.route_tube_radius
+            and max_ref <= self.args.route_tube_max_deviation
+            and progress_s >= self.args.min_route_progress
+        ) else "AVOID_LOCAL"
+
+        if not safety["safe"]:
+            total += 10000.0  # soft penalty so unsafe paths are only picked if required
+            mode_hint = "UNSAFE"
+
+        return ArbiterEval(
+            candidate=candidate,
+            safe=safety["safe"],
+            reason=safety["reason"] if not safety["safe"] else "safe",
+            mode_hint=mode_hint,
+            total_cost=float(total),
+            mean_ref_dist=float(mean_ref),
+            max_ref_dist=float(max_ref),
+            endpoint_ref_dist=float(endpoint_ref),
+            queue_cost=float(queue_cost),
+            progress_s=float(progress_s),
+            clearance_cost=float(clearance_cost),
+            unknown_cost=float(unknown_cost),
+            smooth_cost=float(smooth_cost),
+            curvature_cost=float(curvature_cost),
+            occupied_hits=safety["occupied_hits"],
+            near_unknown_hits=safety["near_unknown_hits"],
+            footprint_occupied_hits=safety["footprint_occupied_hits"],
+            footprint_near_unknown_hits=safety["footprint_near_unknown_hits"],
+        )
+
+    def check_candidate_safety(self, pts: np.ndarray, grid: np.ndarray, info: GridInfo) -> Dict[str, float]:
+        occupied_hits = 0
+        near_unknown_hits = 0
+        far_unknown_hits = 0
+        out_hits = 0
+        footprint_occupied_hits = 0
+        footprint_near_unknown_hits = 0
+        footprint_far_unknown_hits = 0
+        footprint_out_hits = 0
+
+        sampled = pts[::max(1, self.args.centerline_stride)]
+        for p in sampled:
+            x = float(p[0])
+            y = float(p[1])
+            dist = math.hypot(x, y)
+            cell = self.world_to_grid(x, y, info)
+            if cell is None:
+                out_hits += 1
+                continue
+            ix, iy = cell
+            val = int(grid[iy, ix])
+            if val >= self.args.occupied_threshold:
+                occupied_hits += 1
+            elif val < 0:
+                if dist < self.args.near_unknown_distance:
+                    near_unknown_hits += 1
+                else:
+                    far_unknown_hits += 1
+
+        for p in pts[::max(1, self.args.footprint_check_stride)]:
+            x = float(p[0])
+            y = float(p[1])
+            yaw = float(p[2])
+            dist = math.hypot(x, y)
+            c = math.cos(yaw)
+            s = math.sin(yaw)
+
+            for ox, oy in self.footprint_offsets:
+                wx = x + c * float(ox) - s * float(oy)
+                wy = y + s * float(ox) + c * float(oy)
+
+                if self.args.allow_behind_origin and wx < info.origin_x:
+                    continue
+
+                cell = self.world_to_grid(wx, wy, info)
+                if cell is None:
+                    footprint_out_hits += 1
+                    continue
+
+                ix, iy = cell
+                val = int(grid[iy, ix])
+                if val >= self.args.occupied_threshold:
+                    footprint_occupied_hits += 1
+                elif val < 0:
+                    if dist < self.args.near_unknown_distance:
+                        footprint_near_unknown_hits += 1
+                    else:
+                        footprint_far_unknown_hits += 1
+
+        safe = True
+        reason = "safe"
+        if occupied_hits > self.args.max_occupied_hits:
+            safe = False
+            reason = "occupied"
+        elif near_unknown_hits > self.args.max_near_unknown_hits:
+            safe = False
+            reason = "near_unknown"
+        elif out_hits > self.args.max_out_of_map_hits:
+            safe = False
+            reason = "out_of_map"
+        elif footprint_occupied_hits > self.args.max_footprint_occupied_hits:
+            safe = False
+            reason = "footprint_occupied"
+        elif footprint_near_unknown_hits > self.args.max_footprint_near_unknown_hits:
+            safe = False
+            reason = "footprint_near_unknown"
+
+        clearance_cost = (
+            self.args.occupied_weight * occupied_hits
+            + self.args.occupied_footprint_penalty * footprint_occupied_hits
+            + 0.3 * footprint_out_hits
+        )
+        unknown_cost = (
+            self.args.unknown_near_weight * near_unknown_hits
+            + self.args.unknown_far_weight * far_unknown_hits
+            + self.args.unknown_near_footprint_penalty * footprint_near_unknown_hits
+            + self.args.unknown_far_footprint_penalty * footprint_far_unknown_hits
+        )
+
+        return {
+            "safe": safe,
+            "reason": reason,
+            "occupied_hits": int(occupied_hits),
+            "near_unknown_hits": int(near_unknown_hits),
+            "footprint_occupied_hits": int(footprint_occupied_hits),
+            "footprint_near_unknown_hits": int(footprint_near_unknown_hits),
+            "clearance_cost": float(clearance_cost),
+            "unknown_cost": float(unknown_cost),
+        }
+
+    def reference_metrics(self, pts_xy: np.ndarray, ref_xy: Optional[np.ndarray]) -> Tuple[float, float, float, float]:
+        if ref_xy is None or len(ref_xy) < 2:
+            # Fall back to current waypoint if no reference path exists.
+            if self.current_waypoint_local is None:
+                return 2.0, 2.0, 2.0, 0.0
+            target = np.asarray(self.current_waypoint_local, dtype=np.float32)
+            d = np.linalg.norm(pts_xy - target[None, :], axis=1)
+            return float(np.mean(d)), float(np.max(d)), float(np.linalg.norm(pts_xy[-1] - target)), float(pts_xy[-1, 0])
+
+        query = pts_xy[::max(1, self.args.ref_metric_stride)]
+        dists, progress = self.distance_and_progress_to_polyline(query, ref_xy)
+        end_dist, end_prog = self.distance_and_progress_to_polyline(pts_xy[-1:, :], ref_xy)
+
+        return (
+            float(np.mean(dists)),
+            float(np.max(dists)),
+            float(end_dist[0]),
+            float(end_prog[0]),
+        )
+
+    def queue_tracking_cost(self, pts_xy: np.ndarray, q_xy: Optional[np.ndarray]) -> float:
+        if q_xy is None or len(q_xy) == 0:
+            if self.current_waypoint_local is None:
+                return 0.0
+            q_xy = np.asarray([self.current_waypoint_local], dtype=np.float32)
+
+        weights = list(self.args.queue_weights)
+        if not weights:
+            weights = [1.0]
+
+        cost = 0.0
+        w_sum = 0.0
+        for i, q in enumerate(q_xy):
+            w = weights[min(i, len(weights) - 1)]
+            # Compare queue point qi with candidate point at similar arc-length.
+            if len(self.args.queue_sample_distances) > i:
+                s = float(self.args.queue_sample_distances[i])
+            else:
+                s = float(np.linalg.norm(q))
+            p = self.point_on_polyline(pts_xy, s)
+            d = float(np.linalg.norm(p - q))
+            cost += w * d
+            w_sum += w
+        return cost / max(w_sum, 1e-6)
+
+    def switch_smoothness_cost(self, pts_xy: np.ndarray) -> float:
+        if self.last_selected_path_points is None or len(self.last_selected_path_points) < 2:
+            return 0.0
+        old = self.resample_polyline(self.last_selected_path_points[:, :2], self.args.switch_compare_step)
+        new = self.resample_polyline(pts_xy, self.args.switch_compare_step)
+        n = min(len(old), len(new))
+        if n < 2:
+            return 0.0
+        return float(np.mean(np.linalg.norm(old[:n] - new[:n], axis=1)))
+
+    @staticmethod
+    def curvature_cost(pts: np.ndarray) -> float:
+        if len(pts) < 3:
+            return 0.0
+        yaws = pts[:, 2]
+        diffs = []
+        for i in range(1, len(yaws)):
+            d = yaws[i] - yaws[i - 1]
+            while d > math.pi:
+                d -= 2.0 * math.pi
+            while d < -math.pi:
+                d += 2.0 * math.pi
+            diffs.append(abs(d))
+        return float(np.mean(diffs)) if diffs else 0.0
+
+    @staticmethod
+    def distance_and_progress_to_polyline(query_xy: np.ndarray, ref_xy: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        seg = ref_xy[1:] - ref_xy[:-1]
+        seg_len = np.linalg.norm(seg, axis=1)
+        cum = np.concatenate([[0.0], np.cumsum(seg_len)])
+
+        d_out = np.zeros((len(query_xy),), dtype=np.float32)
+        s_out = np.zeros((len(query_xy),), dtype=np.float32)
+
+        for qi, q in enumerate(query_xy):
+            best_d = 1e9
+            best_s = 0.0
+            for i in range(len(seg)):
+                a = ref_xy[i]
+                v = seg[i]
+                l2 = float(np.dot(v, v))
+                if l2 < 1e-8:
+                    t = 0.0
+                    proj = a
+                else:
+                    t = float(np.clip(np.dot(q - a, v) / l2, 0.0, 1.0))
+                    proj = a + t * v
+                d = float(np.linalg.norm(q - proj))
+                if d < best_d:
+                    best_d = d
+                    best_s = float(cum[i] + t * seg_len[i])
+            d_out[qi] = best_d
+            s_out[qi] = best_s
+        return d_out, s_out
+
+    @staticmethod
+    def resample_polyline(xy: np.ndarray, step: float) -> np.ndarray:
+        xy = np.asarray(xy, dtype=np.float32)
+        if len(xy) < 2:
+            return xy
+        step = max(0.05, float(step))
+        seg_lens = np.linalg.norm(np.diff(xy, axis=0), axis=1)
+        total = float(np.sum(seg_lens))
+        if total < 1e-6:
+            return xy[:1]
+        targets = np.arange(0.0, total + 1e-6, step, dtype=np.float32)
+        if targets[-1] < total:
+            targets = np.append(targets, total)
+
+        cum = np.concatenate([[0.0], np.cumsum(seg_lens)])
+        out = []
+        j = 0
+        for t in targets:
+            while j + 1 < len(cum) and cum[j + 1] < t:
+                j += 1
+            if j + 1 >= len(cum):
+                out.append(xy[-1])
+                continue
+            denom = max(float(cum[j + 1] - cum[j]), 1e-6)
+            ratio = float((t - cum[j]) / denom)
+            out.append(xy[j] + ratio * (xy[j + 1] - xy[j]))
+        return np.asarray(out, dtype=np.float32)
+
+    @staticmethod
+    def point_on_polyline(xy: np.ndarray, dist: float) -> np.ndarray:
+        if len(xy) == 0:
+            return np.asarray([0.0, 0.0], dtype=np.float32)
+        if len(xy) == 1 or dist <= 0.0:
+            return xy[0]
+        seg_lens = np.linalg.norm(np.diff(xy, axis=0), axis=1)
+        accum = 0.0
+        for i, seg in enumerate(seg_lens):
+            if accum + seg >= dist:
+                ratio = (dist - accum) / max(float(seg), 1e-6)
+                return xy[i] + ratio * (xy[i + 1] - xy[i])
+            accum += float(seg)
+        return xy[-1]
+
+    @staticmethod
+    def smooth_polyline(xy: np.ndarray, passes: int) -> np.ndarray:
+        if len(xy) < 4 or passes <= 0:
+            return xy
+        out = xy.copy()
+        for _ in range(int(passes)):
+            new = out.copy()
+            new[1:-1] = 0.25 * out[:-2] + 0.50 * out[1:-1] + 0.25 * out[2:]
+            out = new
+        return out
+
+    @staticmethod
+    def polyline_yaws(xy: np.ndarray) -> np.ndarray:
+        yaws = np.zeros((len(xy),), dtype=np.float32)
+        if len(xy) < 2:
+            return yaws
+        for i in range(len(xy)):
+            if i == 0:
+                d = xy[1] - xy[0]
+            elif i == len(xy) - 1:
+                d = xy[-1] - xy[-2]
+            else:
+                d = xy[i + 1] - xy[i - 1]
+            yaws[i] = math.atan2(float(d[1]), float(d[0]))
+        return yaws
+
+    def publish_candidate(self, candidate: CandidatePath, stamp, frame_id: str) -> None:
+        msg = Path()
+        msg.header.stamp = stamp
+        msg.header.frame_id = frame_id
+        for x, y, yaw in candidate.points:
+            msg.poses.append(self.make_pose(float(x), float(y), float(yaw), frame_id, stamp))
+        self.selected_pub.publish(msg)
+
 
     # ------------------------------------------------------------------
     # CMU-like group selection
@@ -500,12 +1186,65 @@ class LocalRolloutSelector(Node):
         score -= self.args.footprint_penalty_weight * footprint_penalty
         score -= self.args.shape_weight * abs(rollout.y_peak)
 
+        far_path_cost = self.far_path_alignment_cost(rollout)
+        if far_path_cost is not None:
+            score -= self.args.far_path_weight * far_path_cost
+
         if rollout.is_representative:
             score += self.args.representative_bonus
         if rollout.family == "recovery":
             score += self.args.recovery_bonus
 
         return PathEval(rollout, True, score, endpoint_dist, footprint_penalty, center_penalty, "safe")
+
+
+    def far_path_alignment_cost(self, rollout: Rollout) -> Optional[float]:
+        """Penalty for deviating from /far_local_plan.
+
+        The far planner's path is a structural/global guide. The rollout is still
+        collision-checked locally, but among safe rollouts we prefer the one that
+        stays close to this guide. This fixes the common mismatch where the green
+        far path and blue local rollout diverge.
+        """
+        if self.far_path_xy is None:
+            return None
+        if time.time() - self.last_far_path_wall_time > self.args.far_path_timeout:
+            return None
+        if len(self.far_path_xy) < 2:
+            return None
+
+        stride = max(1, self.args.far_path_rollout_stride)
+        pts = rollout.points[::stride, :2].astype(np.float32)
+        if pts.shape[0] == 0:
+            return None
+
+        guide = self.far_path_xy
+        total = 0.0
+        count = 0
+        for p in pts:
+            d = guide - p
+            dist2 = np.sum(d * d, axis=1)
+            total += math.sqrt(float(np.min(dist2)))
+            count += 1
+
+        mean_dist = total / max(count, 1)
+
+        end = rollout.points[-1, :2].astype(np.float32)
+        d_end = guide - end
+        end_dist = math.sqrt(float(np.min(np.sum(d_end * d_end, axis=1))))
+
+        # Heading consistency with the first segment of the far guide.
+        g0 = guide[0]
+        g1 = guide[min(len(guide) - 1, self.args.far_path_heading_index)]
+        guide_heading = math.atan2(float(g1[1] - g0[1]), float(g1[0] - g0[0]))
+        rollout_heading = math.atan2(float(rollout.y_end), float(rollout.length))
+        heading_err = abs(self.normalize_angle(rollout_heading - guide_heading))
+
+        return (
+            mean_dist
+            + self.args.far_path_endpoint_weight * end_dist
+            + self.args.far_path_heading_weight * heading_err
+        )
 
     def smooth_group_scores(self, group_scores: np.ndarray) -> np.ndarray:
         """Low-pass group scores to reduce left/right flicker from noisy grids."""
@@ -750,6 +1489,11 @@ class LocalRolloutSelector(Node):
         msg.data = bool(ok)
         self.local_ok_pub.publish(msg)
 
+    def publish_local_status(self, status: str) -> None:
+        msg = String()
+        msg.data = str(status)
+        self.local_status_pub.publish(msg)
+
     def make_pose(self, x: float, y: float, yaw: float, frame_id: str, stamp) -> PoseStamped:
         msg = PoseStamped()
         msg.header.stamp = stamp
@@ -795,10 +1539,16 @@ def parse_args():
 
     parser.add_argument("--grid-topic", default="/local_traversability_grid")
     parser.add_argument("--current-waypoint-local-topic", default="/current_waypoint_local")
+    parser.add_argument("--far-local-plan-topic", default="/far/local_plan")
+    parser.add_argument("--reference-path-topic", default="/far/reference_path_local")
+    parser.add_argument("--waypoint-queue-topic", default="/far/waypoint_queue_local")
+    parser.add_argument("--current-subgoal-topic", default="/far/current_subgoal_local")
+    parser.add_argument("--route-status-topic", default="/far/route_status")
     parser.add_argument("--selected-path-topic", default="/local_selected_trajectory")
     parser.add_argument("--candidate-paths-topic", default="/local_candidate_trajectories")
     parser.add_argument("--local-planner-ok-topic", default="/local_planner_ok")
-    parser.add_argument("--far-goal-reached-topic", default="/far_goal_reached")
+    parser.add_argument("--local-status-topic", default="/local/status")
+    parser.add_argument("--far-goal-reached-topic", default="/far/goal_reached")
 
     parser.add_argument("--use-sim-time", dest="use_sim_time", action="store_true", default=True)
     parser.add_argument("--no-sim-time", dest="use_sim_time", action="store_false")
@@ -850,6 +1600,15 @@ def parse_args():
     parser.add_argument("--representative-bonus", type=float, default=1.0)
     parser.add_argument("--recovery-bonus", type=float, default=0.2)
 
+    # Far-planner guide path adherence. This is the main local reconstruction change.
+    parser.add_argument("--far-path-timeout", type=float, default=1.0)
+    parser.add_argument("--far-path-weight", type=float, default=2.2)
+    parser.add_argument("--far-path-endpoint-weight", type=float, default=0.6)
+    parser.add_argument("--far-path-heading-weight", type=float, default=0.8)
+    parser.add_argument("--far-path-heading-index", type=int, default=3)
+    parser.add_argument("--far-path-rollout-stride", type=int, default=2)
+    parser.add_argument("--far-path-min-point-gap", type=float, default=0.05)
+
     # Raw penalty weights.
     parser.add_argument("--free-weight", type=float, default=0.04)
     parser.add_argument("--occupied-weight", type=float, default=20.0)
@@ -862,6 +1621,37 @@ def parse_args():
     parser.add_argument("--unknown-near-footprint-penalty", type=float, default=2.5)
     parser.add_argument("--unknown-far-footprint-penalty", type=float, default=0.5)
     parser.add_argument("--out-of-map-footprint-penalty", type=float, default=2.0)
+
+    # Arbiter: route tube + ordered waypoint queue.
+    parser.add_argument("--waypoint-queue-timeout", type=float, default=1.0)
+    parser.add_argument("--route-tube-radius", type=float, default=0.65)
+    parser.add_argument("--route-tube-max-deviation", type=float, default=1.10)
+    parser.add_argument("--min-route-progress", type=float, default=0.20)
+    parser.add_argument("--ref-prepend-origin-distance", type=float, default=0.25)
+    parser.add_argument("--ref-min-x", type=float, default=-0.2)
+    parser.add_argument("--ref-max-x", type=float, default=4.0)
+    parser.add_argument("--ref-y-limit", type=float, default=2.6)
+    parser.add_argument("--ref-max-length", type=float, default=3.8)
+    parser.add_argument("--ref-publish-step", type=float, default=0.25)
+    parser.add_argument("--ref-smoothing-passes", type=int, default=1)
+    parser.add_argument("--ref-metric-stride", type=int, default=2)
+    parser.add_argument("--queue-sample-distances", type=float, nargs="+", default=[0.8, 1.5, 2.5, 3.3, 4.0])
+    parser.add_argument("--queue-weights", type=float, nargs="+", default=[0.35, 0.30, 0.20, 0.10, 0.05])
+    parser.add_argument("--ref-mean-weight", type=float, default=4.0)
+    parser.add_argument("--ref-max-weight", type=float, default=1.8)
+    parser.add_argument("--ref-endpoint-weight", type=float, default=1.2)
+    parser.add_argument("--queue-weight", type=float, default=3.5)
+    parser.add_argument("--progress-reward-weight", type=float, default=1.4)
+    parser.add_argument("--progress-reward-cap", type=float, default=4.0)
+    parser.add_argument("--clearance-weight", type=float, default=1.0)
+    parser.add_argument("--unknown-cost-weight", type=float, default=0.8)
+    parser.add_argument("--switch-smooth-weight", type=float, default=1.2)
+    parser.add_argument("--curvature-weight", type=float, default=0.7)
+    parser.add_argument("--reference-candidate-bonus", type=float, default=1.0)
+    parser.add_argument("--rejoin-weight", type=float, default=2.0)
+    parser.add_argument("--rollout-shape-weight", type=float, default=0.20)
+    parser.add_argument("--arbiter-switch-margin", type=float, default=1.0)
+    parser.add_argument("--switch-compare-step", type=float, default=0.25)
 
     parser.add_argument("--publish-candidates", action="store_true")
     parser.add_argument("--debug-rejections", action="store_true")

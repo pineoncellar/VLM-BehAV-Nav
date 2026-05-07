@@ -41,14 +41,14 @@ sleep 4
 # 2. Start local rollout
 echo "[2/3] Starting Local Rollout Selector..."
 cd planner/localplanner
-python3 local_rollout_selector.py &
+python3 local_rollout_selector.py --waypoint-timeout 60.0 --max-lateral-offset 0.1 &
 cd ../..
 sleep 2
 
 # 3. Start MPC Tracker
 echo "[3/3] Starting MPC Tracker..."
 cd planner/localplanner
-python3 ackermann_mpc_tracker.py --max-speed 0.15 &
+python3 ackermann_mpc_tracker.py --max-speed 0.5 &
 cd ../..
 
 echo ""

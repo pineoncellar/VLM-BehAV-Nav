@@ -133,8 +133,10 @@ class BehavMainPipeline:
                 wp.header.frame_id = "base_footprint"
                 # bearing_deg 转换为弧度
                 theta = math.radians(bearing_deg)
-                wp.pose.position.x = distance_m * math.cos(theta)
-                wp.pose.position.y = distance_m * math.sin(theta)
+                # 提前 1.2 米作为停车观察点，防止避障时绕到目标背后
+                standoff_distance = max(0.0, distance_m - 1.2)
+                wp.pose.position.x = standoff_distance * math.cos(theta)
+                wp.pose.position.y = standoff_distance * math.sin(theta)
                 wp.pose.position.z = 0.0
                 wp.pose.orientation.w = 1.0  # 简化的四元数
                 wp_msg = wp

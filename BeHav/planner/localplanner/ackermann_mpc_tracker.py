@@ -153,7 +153,6 @@ class AckermannMPCTracker(Node):
             return
 
         if time.time() - self.last_path_wall_time > self.args.path_timeout:
-            self.get_logger().warn("Path timeout. Publishing stop.")
             self.publish_stop()
             return
 
@@ -170,6 +169,9 @@ class AckermannMPCTracker(Node):
         if best is None:
             self.publish_stop()
             return
+
+        if best.v == 0.0 and abs(best.steer_target) == 0.0:
+             self.get_logger().info("MPC solver chose v=0.0")
 
         # Rate-limit steering target for Ackermann smoothness.
         dt = 1.0 / max(self.args.control_hz, 1e-3)
@@ -194,6 +196,10 @@ class AckermannMPCTracker(Node):
         self.last_cmd_v = v_cmd
         self.last_cmd_steer = steer_cmd
 
+        if not hasattr(self, 'plan_count'):
+            self.plan_count = 0
+        self.plan_count += 1
+
         msg = Twist()
         msg.linear.x = float(v_cmd)
         msg.linear.y = 0.0
@@ -201,6 +207,11 @@ class AckermannMPCTracker(Node):
         msg.angular.x = 0.0
         msg.angular.y = 0.0
         msg.angular.z = float(yaw_rate)
+        
+        # DEBUG output to verify if tracker commands actual movement
+        if self.plan_count % max(1, int(self.args.control_hz)) == 0:
+            self.get_logger().info(f"Publishing cmd_vel: v={v_cmd:.2f}, steer={math.degrees(steer_cmd):.1f} deg, yaw_rate={yaw_rate:.2f}. Path dist: {path_len:.1f}")
+
         self.cmd_pub.publish(msg)
 
     # ------------------------------------------------------------------

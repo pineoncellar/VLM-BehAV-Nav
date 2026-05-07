@@ -186,36 +186,19 @@ def get_similarity_scores(input_actions, reference_list):
     except Exception:
         pass
 
-    # Fallback for outputs like:
-    # [[0.45 0.15 0.25 0.15]
-    #  [0.10 0.20 0.30 0.40]]
+    # Fallback for outputs like Markdown matrices or plain text arrays
+    import re
     cleaned = similarity_scores_str.strip()
-    cleaned = cleaned.replace('], [', ']\n[')
-    cleaned = cleaned.replace(']\n [', ']\n[')
-
-    row_strings = []
-    for line in cleaned.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        line = line.strip('[]').strip()
-        if line:
-            row_strings.append(line)
-
-    rows = []
-    for row_str in row_strings:
-        row = np.fromstring(row_str.replace(',', ' '), sep=' ')
-        if row.size > 0:
-            rows.append(row)
-
-    similarity_scores_array = np.array(rows, dtype=float)
-
-    if similarity_scores_array.shape != (input_actions_length, reference_list_length):
+    
+    numbers = re.findall(r'[-+]?\d*\.\d+|\d+', cleaned)
+    try:
+        similarity_scores_array = np.array(numbers, dtype=float).reshape(input_actions_length, reference_list_length)
+    except Exception as e:
         raise ValueError(
-            f"Unexpected similarity score shape: {similarity_scores_array.shape}, "
-            f"expected ({input_actions_length}, {reference_list_length}). "
+            f"Failed to parse similarity score shape from {len(numbers)} numbers. "
+            f"Expected ({input_actions_length}, {reference_list_length}). "
             f"Raw model output: {similarity_scores_str}"
-        )
+        ) from e
 
     return similarity_scores_array
 
