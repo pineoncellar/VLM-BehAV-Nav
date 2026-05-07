@@ -116,7 +116,7 @@ class BehavMainPipeline:
             self.behav_planner.goal_radius = distance_m
             self.behav_planner.goal_theta = bearing_deg
             self.behav_planner.received_final_goal_odom = False # 强制重新计算以车辆中心为基准的新目标点
-            if distance_m < 1.0: # 如果距离目标极近，可直接发送停止指令或大幅降低速度
+            if distance_m < 1.0 and cmd_msg is not None: # 如果距离目标极近，可直接发送停止指令或大幅降 低速度
                 cmd_msg.linear.x *= 0.5
                 cmd_msg.angular.z *= 0.5
 

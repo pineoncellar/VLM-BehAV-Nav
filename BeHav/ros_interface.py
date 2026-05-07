@@ -195,8 +195,9 @@ class LandmarkDetectorNode(Node):
         核心控制闭环（通过 Pipeline 下发调用获取最终决策层给出的速度包）
         """
         msg = self.pipeline.compute_control_command()
-        self.cmd_pub.publish(msg)
-        self.dual_logger.debug(f"==> [ros_interface] Publishing CMD: {msg.linear.x}, {msg.angular.z}")
+        if msg is not None:
+            self.cmd_pub.publish(msg)
+            self.dual_logger.debug(f"==> [ros_interface] Publishing CMD: {msg.linear.x}, {msg.angular.z}")
 
 def run_instruction_pipeline():
     """测试用，可直接调用 Pipeline 单次测试 NLP 并获取行为 costs"""
