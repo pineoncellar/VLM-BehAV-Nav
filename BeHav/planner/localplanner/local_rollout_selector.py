@@ -41,11 +41,15 @@ No vehicle control is published here.
 
 import argparse
 import math
+import os
 import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+
+# Global configuration from environment
+DISABLE_ANTI_JITTER = os.environ.get('DISABLE_ANTI_JITTER', '0') == '1'
 
 import rclpy
 from rclpy.node import Node
@@ -552,7 +556,7 @@ class LocalRolloutSelector(Node):
 
         # Sticky candidate hysteresis: do not switch unless clearly better.
         old_eval = None
-        if self.selected_candidate_id is not None:
+        if not DISABLE_ANTI_JITTER and self.selected_candidate_id is not None:
             for e in safe:
                 if e.candidate.candidate_id == self.selected_candidate_id:
                     old_eval = e
@@ -585,6 +589,13 @@ class LocalRolloutSelector(Node):
         return best
 
     def hold_last_eval_if_allowed(self) -> Optional[ArbiterEval]:
+        if DISABLE_ANTI_JITTER:
+            self.selected_candidate_id = None
+            self.selected_rollout_id = None
+            self.selected_group_id = None
+            self.last_selected_eval = None
+            return None
+
         if (
             self.last_selected_eval is not None
             and self.no_valid_plan_count <= self.args.max_hold_last_path_frames
@@ -1108,6 +1119,7 @@ class LocalRolloutSelector(Node):
             # Holding for a few planning frames prevents the tracker from doing
             # stop-go-stop when depth/unknown cells flicker.
             if (
+                not DISABLE_ANTI_JITTER and 
                 self.last_selected_rollout is not None
                 and self.no_valid_plan_count <= self.args.max_hold_last_path_frames
             ):
@@ -1244,6 +1256,9 @@ class LocalRolloutSelector(Node):
 
     def smooth_group_scores(self, group_scores: np.ndarray) -> np.ndarray:
         """Low-pass group scores to reduce left/right flicker from noisy grids."""
+        if DISABLE_ANTI_JITTER:
+            return group_scores.copy()
+
         alpha = float(self.args.group_score_ema_alpha)
         alpha = self.clamp(alpha, 0.0, 1.0)
 
@@ -1273,6 +1288,9 @@ class LocalRolloutSelector(Node):
         group_scores: np.ndarray,
         group_safe_counts: np.ndarray,
     ) -> int:
+        if DISABLE_ANTI_JITTER:
+            return raw_best_group
+
         if self.selected_group_id is None:
             return raw_best_group
 
@@ -1318,10 +1336,11 @@ class LocalRolloutSelector(Node):
         # First keep the previously selected rollout inside the same group unless
         # a new safe rollout is clearly better. This removes same-group path twitching.
         old_eval = None
-        for e in safe:
-            if self.selected_rollout_id is not None and e.rollout.traj_id == self.selected_rollout_id:
-                old_eval = e
-                break
+        if not DISABLE_ANTI_JITTER:
+            for e in safe:
+                if self.selected_rollout_id is not None and e.rollout.traj_id == self.selected_rollout_id:
+                    old_eval = e
+                    break
 
         if old_eval is not None:
             if best.path_score - old_eval.path_score < self.args.rollout_switch_margin:
