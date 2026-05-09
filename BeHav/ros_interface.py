@@ -1,6 +1,7 @@
 import cv2
 import math
 import os
+import time
 import datetime
 import logging
 import rclpy
@@ -84,7 +85,12 @@ class LandmarkDetectorNode(Node):
         self.dual_logger.info(f"Using instruction: {instruction}")
         
         # 将指令与 skip_nlp 标志传递给 pipeline
+        llm_start = time.time()
         self.pipeline.run_instruction_reasoning(instruction, skip_nlp=skip_nlp)
+        llm_end = time.time()
+        
+        if os.environ.get('ENABLE_EXP1_LATENCY_LOG') == '1':
+            self.dual_logger.info(f"[EXP1_LOG] 大语言模型指令推理端到端耗时: {llm_end - llm_start:.4f} 秒, timestamp: {llm_end}")
         
         # ROS节点定义
         self.image_topic = "/camera_sensor/image_raw"
@@ -175,11 +181,15 @@ class LandmarkDetectorNode(Node):
         self.pipeline.update_sensor_data(odom_msg=msg)
 
     def _process_thread(self, cv_image, depth_image):
+        vision_start = time.time()
         try:
             self.pipeline.process_vision_cv2(cv_image, depth_image=depth_image)
         except Exception as e:
             self.dual_logger.error(f'process_image failed: {str(e)}')
         finally:
+            vision_end = time.time()
+            if os.environ.get('ENABLE_EXP1_LATENCY_LOG') == '1':
+                self.dual_logger.info(f"[EXP1_LOG] 视觉管线处理端到端耗时: {vision_end - vision_start:.4f} 秒, timestamp: {vision_end}")
             self.is_processing = False
 
     def timer_callback(self):
