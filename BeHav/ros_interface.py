@@ -174,6 +174,14 @@ class LandmarkDetectorNode(Node):
     def odom_callback(self, msg: Odometry):
         self.pipeline.update_sensor_data(odom_msg=msg)
 
+    def _process_thread(self, cv_image, depth_image):
+        try:
+            self.pipeline.process_vision_cv2(cv_image, depth_image=depth_image)
+        except Exception as e:
+            self.dual_logger.error(f'process_image failed: {str(e)}')
+        finally:
+            self.is_processing = False
+
     def timer_callback(self):
         if self.latest_image is None or self.is_processing:
             self.dual_logger.info("No image or already processing...")
@@ -181,14 +189,12 @@ class LandmarkDetectorNode(Node):
 
         self.dual_logger.info("Starting image processing...")
         self.is_processing = True
-        try:
-            # Send latest image to vision landmark detector in pipeline
-            depth_img = self.latest_depth_image.copy() if self.latest_depth_image is not None else None
-            self.pipeline.process_vision_cv2(self.latest_image.copy(), depth_image=depth_img)
-        except Exception as e:
-            self.dual_logger.error(f'process_image failed: {str(e)}')
-        finally:
-            self.is_processing = False
+        import threading
+        depth_img = self.latest_depth_image.copy() if self.latest_depth_image is not None else None
+        cv_img = self.latest_image.copy()
+        t = threading.Thread(target=self._process_thread, args=(cv_img, depth_img))
+        t.daemon = True
+        t.start()
 
     def control_loop(self):
         """
