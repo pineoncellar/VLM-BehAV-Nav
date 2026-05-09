@@ -80,11 +80,9 @@ def main():
     detector.navigation_landmarks = landmarks
     detector.navigation_actions = nav_actions
     
-    # 修改输出路径以保存到 script/output
-    if hasattr(detector, 'detector'): # Ensure inner components also save to out
-        if hasattr(detector.detector, 'debug_dir'):
-            detector.detector.debug_dir = output_dir
-            detector.detector.save_debug = True
+    # 强制将输出图片路径指向本脚本的 output 目录，并开启绘图
+    detector.save_debug_dir = output_dir
+    detector.save_debug_plot = True
 
     # 5. 处理图像并预测
     try:
