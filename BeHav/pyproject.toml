@@ -13,4 +13,5 @@ dependencies = [
     "matplotlib",
     "Pillow",
     "ultralytics>=8.4.46",
+    "pandas>=2.3.3",
 ]
