@@ -26,11 +26,33 @@ client = OpenAI(
 
 def get_instruction_breakdown(language_instruction):
     prompt = f'''
-    "{language_instruction}", can you extract the landmarks (e.g., a building), navigation actions (e.g., go forward), 
-    general behavioral actions (e.g., stay on, avoid) and behavioral targets (e.g., pavement) from the paragraph given in quotes.
-    
-    Format the output as a SINGLE JSON dictionary where keys are "landmarks", "navigation_actions", "behavioral_actions", and "behavioral_targets", and the values are lists of strings.
-    Do not explain. Only output the JSON dictionary.
+    You are an expert NLP parser for a robot navigation system. Analyze the following instruction carefully:
+    "{language_instruction}"
+
+    Extract all information into precisely 4 categories based on these strict definitions:
+    1. "landmarks": ONLY the primary destination objects the robot needs to reach (e.g., white house, SUV, trash can, bus, mailbox, fire hydrant).
+    2. "navigation_actions": Verbs or phrases describing general movement towards destinations (e.g., go straight, navigate to, approach, head to, move).
+    3. "behavioral_actions": Actions representing path constraints, rules, or spatial maneuvers (e.g., avoid, stay on, keep off, do not step on, stick to, keep away from, squeeze between, pass through, pass between, traverse, follow).
+    4. "behavioral_targets": ALL entities, paths, and borders that the behavioral_actions apply to. You MUST exhaustively include:
+       - Every obstacle to avoid/keep off (e.g., grass, lawn, traffic cones, fountain, barrier).
+       - Every surface to stay on (e.g., road, asphalt, pavement, sidewalk).
+       - The specific constrained spaces AND their borders (e.g., narrow path, tight corridor, space between traffic cones and grass, parked SUV). 
+
+    Examples:
+    Input: "Walk straight to the SUV, you must pass through the narrow path between the grass and the trash cans."
+    Output: {{"landmarks": ["SUV"], "navigation_actions": ["walk straight"], "behavioral_actions": ["pass through"], "behavioral_targets": ["narrow path", "grass", "trash cans"]}}
+
+    Input: "Approach the white house, passing carefully between the fountain and the grass, while staying on the road."
+    Output: {{"landmarks": ["white house"], "navigation_actions": ["approach"], "behavioral_actions": ["pass carefully between", "staying on"], "behavioral_targets": ["fountain", "grass", "road"]}}
+
+    Input: "Navigate to the bus, pass between the green dumpster and the lawn without touching the grass."
+    Output: {{"landmarks": ["bus"], "navigation_actions": ["navigate to"], "behavioral_actions": ["pass between", "without touching"], "behavioral_targets": ["green dumpster", "lawn", "grass"]}}
+
+    Input: "Move to the green dumpster, stay on the paved road."
+    Output: {{"landmarks": ["green dumpster"], "navigation_actions": ["move to"], "behavioral_actions": ["stay on"], "behavioral_targets": ["paved road"]}}
+
+    Format the output strictly as a SINGLE JSON dictionary with keys: "landmarks", "navigation_actions", "behavioral_actions", and "behavioral_targets". The values must be lists of strings.
+    Do not explain. Only output the pure JSON dictionary.
     '''
 
     response = client.chat.completions.create(
