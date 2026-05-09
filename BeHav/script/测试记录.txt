@@ -1,0 +1,222 @@
+zyy@wzj:~/VLM-BehAV-Nav/BeHav$  uv run python script/batch_evaluate_instructions.py
+================ 开始自动化批量评测 Qwen 指令解构精度 ================
+
+
+=== 难度等级 1：单目标单约束 (Single-target, Single-constraint) ===
+  [测试] Go straight to the white house, do not step on the grass.
+  [测试] Navigate to the SUV while staying on the asphalt road.
+    [失败] 原因: ['大模型裁判未给出具体原因']
+    [模型输出] {'landmarks': ['SUV'], 'navigation_actions': ['navigate to'], 'behavioral_actions': ['staying on'], 'behavioral_targets': ['asphalt road']}
+
+  [测试] Walk safely to the trash can, avoid the lawn.
+  [测试] Head towards the fire hydrant, keep off the grass.
+    [失败] 原因: ['大模型裁判未给出具体原因']
+    [模型输出] {'landmarks': ['fire hydrant'], 'navigation_actions': ['head towards'], 'behavioral_actions': ['keep off'], 'behavioral_targets': ['grass']}
+
+  [测试] Move to the green dumpster, stay on the paved road.
+    [失败] 原因: ['大模型裁判未给出具体原因']
+    [模型输出] {'landmarks': ['green dumpster'], 'navigation_actions': ['move to'], 'behavioral_actions': ['stay on'], 'behavioral_targets': ['paved road']}
+
+  [测试] Approach the mailbox, avoiding the grass.
+  [测试] Go straight to the fountain, please stay on the sidewalk.
+    [失败] 原因: ['大模型裁判未给出具体原因']
+    [模型输出] {'landmarks': ['fountain'], 'navigation_actions': ['go straight'], 'behavioral_actions': ['stay on'], 'behavioral_targets': ['sidewalk']}
+
+  [测试] Walk to the bus, do not touch the grass.
+  [测试] Navigate to the white house, avoid the unpaved grass.
+  [测试] Direct yourself to the SUV, stick to the road.
+  [测试] Proceed to the fire hydrant without stepping on the lawn.
+  [测试] Approach the trash can, making sure to avoid grass.
+  [测试] Go to the mailbox, walk on the road only.
+  [测试] Move towards the white house, stay clearly on the sidewalk.
+  [测试] Navigate to the parked bus, avoid the grass areas.
+  [测试] Walk to the fountain, keeping your path on the asphalt.
+  [测试] Head to the green dumpster, do not enter the grass.
+  [测试] Go to the SUV, stay strictly on the paved path.
+  [测试] Approach the fire hydrant, avoiding the green lawn.
+  [测试] Proceed to the bus, keep on the road surface.
+  [测试] Walk towards the mailbox, do not drive on the grass.
+  [测试] Navigate to the trash can, keep yourself on the asphalt road.
+  [测试] Head straight to the fountain, avoid stepping on the grass.
+  [测试] Move to the white house, follow the sidewalk.
+  [测试] Direct towards the green dumpster, stay entirely off the grass.
+
+=== 难度等级 2：多目标复合约束 (Multi-target, Composite constraint) ===
+  [测试] Walk on the road, avoid the grass, go straight to the fire hydrant, then turn right and approach the parked bus.
+  [测试] First go to the mailbox, then navigate to the white house. Please stay on the sidewalk and keep away from the traffic cones.
+  [测试] Move to the fountain and then head to the SUV. Avoid stepping on the lawn and stick to the paved road.
+  [测试] Go towards the trash can, then proceed to the bus, making sure to avoid the grass and stay on the road.
+  [测试] First approach the green dumpster, then turn left to the mailbox. Keep on the sidewalk and avoid traffic cones.
+  [测试] Walk to the fire hydrant, then to the SUV. Do not step on the grass and stay clear of the barrier.
+  [测试] Navigate to the white house, then approach the fountain. Walk on the road and avoid the lawn.
+    [失败] 原因: ["landmarks 字段缺失关键地标 'fountain'，该地点是导航指令中明确要求‘approach’的目的地，应被识别为关键地标。"]
+    [模型输出] {'landmarks': ['white house'], 'navigation_actions': ['navigate to', 'approach'], 'behavioral_actions': ['walk on', 'avoid'], 'behavioral_targets': ['road', 'lawn']}
+
+  [测试] Head to the bus, then to the green dumpster. Please stay on the paved path and avoid any traffic cones.
+  [测试] Proceed to the mailbox, then move towards the trash can. Keep on the sidewalk and avoid the grass entirely.
+  [测试] Walk on the asphalt, avoid the lawn, approach the fire hydrant, then go to the white house.
+  [测试] First navigate to the SUV, then to the bus. Make sure to stay on the road and keep away from the barriers.
+  [测试] Go to the fountain, turn and approach the mailbox. Do not step on the grass and stay on the sidewalk.
+  [测试] Head for the trash can, then go to the white house. Avoid the grass and avoid the traffic cones.
+  [测试] Move to the green dumpster, then right to the SUV. Keep to the road and avoid stepping on the lawn.
+  [测试] Walk straight to the bus, then approach the fountain. Avoid traffic cones and stick to the paved areas.
+  [测试] Navigate to the mailbox, then the fire hydrant. Follow the road and do not enter the grass.
+  [测试] Proceed to the white house, then to the green dumpster. Avoid the lawn and avoid the barrier.
+  [测试] Go to the SUV, then turn to the bus. Stay on the asphalt and keep away from the grass.
+  [测试] Head towards the fire hydrant, then the trash can. Please stay on the sidewalk and avoid traffic cones.
+  [测试] Walk to the fountain, then approach the SUV. Keep off the grass and strictly follow the road.
+  [测试] Navigate to the green dumpster, then the white house. Avoid the barriers and stay off the lawn.
+  [测试] First approach the bus, then the mailbox. Stay on the paved road and avoid any traffic cones.
+    [失败] 原因: ["模块输出中 navigation_actions 包含 'then'（非动作），导致遗漏了对 'mailbox' 执行的 'approach' 操作；且 'then' 不应作为导航动作处理，关键特征（第二个 approach）未被准确提取。"]
+    [模型输出] {'landmarks': ['bus', 'mailbox'], 'navigation_actions': ['approach', 'then'], 'behavioral_actions': ['stay on', 'avoid'], 'behavioral_targets': ['paved road', 'traffic cones']}
+
+  [测试] Move to the trash can, then the fire hydrant. Avoid stepping on the grass and follow the sidewalk.
+  [测试] Go straight to the SUV, then navigate to the fountain. Avoid the lawn and avoid the barriers.
+  [测试] Head to the mailbox, then to the green dumpster. Keep on the road and do not step on the grass.
+
+=== 难度等级 3：复杂受限通道穿越 (Complex Constrained Corridor Traversal) ===
+  [测试] Navigate to the green dumpster, you must avoid the fountain and the traffic cones, and keep off the grass.
+  [测试] Walk straight to the SUV, you must pass through the narrow path between the grass and the trash cans.
+  [测试] Approach the white house, passing carefully between the fountain and the grass, while staying on the road.
+  [测试] Go to the bus, navigate through the narrow gap between the traffic cones and the lawn.
+    [失败] 原因: ["导航动作分类错误：原句中'navigate through'未正确识别，错误归类为'navigate to'，导致动作语义失真；尽管behavioral_targets正确，但整体指令解析不准确。"]
+    [模型输出] {'landmarks': ['bus'], 'navigation_actions': ['navigate to'], 'behavioral_actions': ['pass through'], 'behavioral_targets': ['narrow gap', 'traffic cones', 'lawn']}
+
+  [测试] Move towards the fire hydrant, avoid the barrier and the fountain, and do not step on the grass.
+  [测试] Head to the mailbox, squeeze between the parked SUV and the grass, keeping on the paved path.
+  [测试] Proceed to the trash can, you must traverse the tight corridor between the fountain and the traffic cones, avoiding grass.
+  [测试] Navigate to the bus, pass between the green dumpster and the lawn without touching the grass.
+  [测试] Approach the SUV by going through the narrow space between the traffic cones and the sidewalk grass.
+  [测试] Walk to the white house, avoiding the fountain blocking the road, and strictly keep off the grass on the right.
+  [测试] Go to the fire hydrant, pass through the constrained path bordered by the SUV and the lawn.
+  [测试] Move to the green dumpster, navigating the narrow gap left by the traffic cones and the grass.
+  [测试] Head towards the mailbox, squeeze between the fountain and the trash cans while avoiding the grass.
+  [测试] Navigate to the bus, pass through the tight area between the barrier and the lawn without stepping off the road.
+  [测试] Go straight to the SUV, making your way between the fountain and the traffic cones, keep off the grass.
+  [测试] Approach the trash can, pass through the narrow paved corridor between the green dumpster and the grass.
+  [测试] Proceed to the white house, traverse the narrow passage flanked by the SUV and the traffic cones, avoid grass.
+  [测试] Walk to the fire hydrant, squeeze through the tight gap between the fountain and the grass area.
+  [测试] Move to the mailbox, pass between the barrier and the trash cans, strictly avoiding the lawn.
+  [测试] Navigate to the green dumpster, go through the narrow corridor between the parked bus and the grass.
+  [测试] Head to the SUV, navigating around the fountain and the traffic cones while keeping entirely off the grass.
+  [测试] Approach the bus, squeeze past the barrier and the green dumpster without stepping on the grass.
+  [测试] Go to the trash can, pass through the narrow gap bounded by the fountain and the sidewalk lawn.
+  [测试] Proceed to the fire hydrant, traverse the constrained space between the traffic cones and the SUV, avoid grass.
+  [测试] Walk towards the white house, making sure to slip between the fountain and the barrier, while keeping off the grass.
+
+================ 评测报告 (可填入论文 6.2 节) ================
+Level1 - 测试数量: 25, 成功: 21, 准确率: 84.00%
+Level2 - 测试数量: 25, 成功: 23, 准确率: 92.00%
+Level3 - 测试数量: 25, 成功: 24, 准确率: 96.00%
+
+总计 - 测试数量: 75, 成功: 68, 平均准确率: 90.67%
+
+
+
+
+zyy@wzj:~/VLM-BehAV-Nav/BeHav$ uv run script/batch_evaluate_instructions.py 
+================ 开始自动化批量评测 Qwen 指令解构精度 ================
+
+
+=== 难度等级 1：单目标单约束 (Single-target, Single-constraint) ===
+  [测试] Go straight to the white house, do not step on the grass.
+  [测试] Navigate to the SUV while staying on the asphalt road.
+  [测试] Walk safely to the trash can, avoid the lawn.
+    [失败] 原因: ['大模型裁判未给出具体原因']
+    [模型输出] {'landmarks': ['trash can'], 'navigation_actions': ['walk safely to'], 'behavioral_actions': ['avoid'], 'behavioral_targets': ['lawn']}
+
+  [测试] Head towards the fire hydrant, keep off the grass.
+  [测试] Move to the green dumpster, stay on the paved road.
+  [测试] Approach the mailbox, avoiding the grass.
+  [测试] Go straight to the fountain, please stay on the sidewalk.
+  [测试] Walk to the bus, do not touch the grass.
+  [测试] Navigate to the white house, avoid the unpaved grass.
+  [测试] Direct yourself to the SUV, stick to the road.
+  [测试] Proceed to the fire hydrant without stepping on the lawn.
+  [测试] Approach the trash can, making sure to avoid grass.
+  [测试] Go to the mailbox, walk on the road only.
+  [测试] Move towards the white house, stay clearly on the sidewalk.
+  [测试] Navigate to the parked bus, avoid the grass areas.
+  [测试] Walk to the fountain, keeping your path on the asphalt.
+  [测试] Head to the green dumpster, do not enter the grass.
+  [测试] Go to the SUV, stay strictly on the paved path.
+  [测试] Approach the fire hydrant, avoiding the green lawn.
+  [测试] Proceed to the bus, keep on the road surface.
+  [测试] Walk towards the mailbox, do not drive on the grass.
+  [测试] Navigate to the trash can, keep yourself on the asphalt road.
+  [测试] Head straight to the fountain, avoid stepping on the grass.
+  [测试] Move to the white house, follow the sidewalk.
+  [测试] Direct towards the green dumpster, stay entirely off the grass.
+
+=== 难度等级 2：多目标复合约束 (Multi-target, Composite constraint) ===
+  [测试] Walk on the road, avoid the grass, go straight to the fire hydrant, then turn right and approach the parked bus.
+  [测试] First go to the mailbox, then navigate to the white house. Please stay on the sidewalk and keep away from the traffic cones.
+  [测试] Move to the fountain and then head to the SUV. Avoid stepping on the lawn and stick to the paved road.
+  [测试] Go towards the trash can, then proceed to the bus, making sure to avoid the grass and stay on the road.
+  [测试] First approach the green dumpster, then turn left to the mailbox. Keep on the sidewalk and avoid traffic cones.
+  [测试] Walk to the fire hydrant, then to the SUV. Do not step on the grass and stay clear of the barrier.
+  [测试] Navigate to the white house, then approach the fountain. Walk on the road and avoid the lawn.
+    [失败] 原因: ["landmarks 列表中遗漏了关键地标 'fountain'，根据指令 'approach the fountain'，该地标应被包含。尽管 behavioral_targets 正确，但 landmarks 不完整，导致解析不完整。"]
+    [模型输出] {'landmarks': ['white house'], 'navigation_actions': ['navigate to', 'approach'], 'behavioral_actions': ['walk on', 'avoid'], 'behavioral_targets': ['road', 'lawn']}
+
+  [测试] Head to the bus, then to the green dumpster. Please stay on the paved path and avoid any traffic cones.
+  [测试] Proceed to the mailbox, then move towards the trash can. Keep on the sidewalk and avoid the grass entirely.
+  [测试] Walk on the asphalt, avoid the lawn, approach the fire hydrant, then go to the white house.
+  [测试] First navigate to the SUV, then to the bus. Make sure to stay on the road and keep away from the barriers.
+  [测试] Go to the fountain, turn and approach the mailbox. Do not step on the grass and stay on the sidewalk.
+  [测试] Head for the trash can, then go to the white house. Avoid the grass and avoid the traffic cones.
+  [测试] Move to the green dumpster, then right to the SUV. Keep to the road and avoid stepping on the lawn.
+  [测试] Walk straight to the bus, then approach the fountain. Avoid traffic cones and stick to the paved areas.
+  [测试] Navigate to the mailbox, then the fire hydrant. Follow the road and do not enter the grass.
+  [测试] Proceed to the white house, then to the green dumpster. Avoid the lawn and avoid the barrier.
+  [测试] Go to the SUV, then turn to the bus. Stay on the asphalt and keep away from the grass.
+  [测试] Head towards the fire hydrant, then the trash can. Please stay on the sidewalk and avoid traffic cones.
+  [测试] Walk to the fountain, then approach the SUV. Keep off the grass and strictly follow the road.
+  [测试] Navigate to the green dumpster, then the white house. Avoid the barriers and stay off the lawn.
+  [测试] First approach the bus, then the mailbox. Stay on the paved road and avoid any traffic cones.
+    [失败] 原因: ["navigation_actions中包含'then'，但'then'为顺序连接词，非导航动作，属于错误归类"]
+    [模型输出] {'landmarks': ['bus', 'mailbox'], 'navigation_actions': ['approach', 'then'], 'behavioral_actions': ['stay on', 'avoid'], 'behavioral_targets': ['paved road', 'traffic cones']}
+
+  [测试] Move to the trash can, then the fire hydrant. Avoid stepping on the grass and follow the sidewalk.
+  [测试] Go straight to the SUV, then navigate to the fountain. Avoid the lawn and avoid the barriers.
+  [测试] Head to the mailbox, then to the green dumpster. Keep on the road and do not step on the grass.
+
+=== 难度等级 3：复杂受限通道穿越 (Complex Constrained Corridor Traversal) ===
+  [测试] Navigate to the green dumpster, you must avoid the fountain and the traffic cones, and keep off the grass.
+  [测试] Walk straight to the SUV, you must pass through the narrow path between the grass and the trash cans.
+  [测试] Approach the white house, passing carefully between the fountain and the grass, while staying on the road.
+  [测试] Go to the bus, navigate through the narrow gap between the traffic cones and the lawn.
+    [失败] 原因: ["behavioral_actions 中包含未在原句中出现的 'squeeze between'，该短语为推断性表达，非文本原文内容，违反准确提取要求。"]
+    [模型输出] {'landmarks': ['bus'], 'navigation_actions': ['navigate to'], 'behavioral_actions': ['navigate through', 'squeeze between'], 'behavioral_targets': ['narrow gap', 'traffic cones', 'lawn']}
+
+  [测试] Move towards the fire hydrant, avoid the barrier and the fountain, and do not step on the grass.
+  [测试] Head to the mailbox, squeeze between the parked SUV and the grass, keeping on the paved path.
+  [测试] Proceed to the trash can, you must traverse the tight corridor between the fountain and the traffic cones, avoiding grass.
+  [测试] Navigate to the bus, pass between the green dumpster and the lawn without touching the grass.
+  [测试] Approach the SUV by going through the narrow space between the traffic cones and the sidewalk grass.
+  [测试] Walk to the white house, avoiding the fountain blocking the road, and strictly keep off the grass on the right.
+    [失败] 原因: ["被测模块未识别出'road'作为被穿越的通道，该通道被'fountain'阻挡，是关键行为目标之一，根据评判准则必须包含在behavioral_targets中。"]
+    [模型输出] {'landmarks': ['white house'], 'navigation_actions': ['walk to'], 'behavioral_actions': ['avoid', 'strictly keep off'], 'behavioral_targets': ['fountain', 'grass']}
+
+  [测试] Go to the fire hydrant, pass through the constrained path bordered by the SUV and the lawn.
+  [测试] Move to the green dumpster, navigating the narrow gap left by the traffic cones and the grass.
+  [测试] Head towards the mailbox, squeeze between the fountain and the trash cans while avoiding the grass.
+  [测试] Navigate to the bus, pass through the tight area between the barrier and the lawn without stepping off the road.
+  [测试] Go straight to the SUV, making your way between the fountain and the traffic cones, keep off the grass.
+  [测试] Approach the trash can, pass through the narrow paved corridor between the green dumpster and the grass.
+  [测试] Proceed to the white house, traverse the narrow passage flanked by the SUV and the traffic cones, avoid grass.
+  [测试] Walk to the fire hydrant, squeeze through the tight gap between the fountain and the grass area.
+  [测试] Move to the mailbox, pass between the barrier and the trash cans, strictly avoiding the lawn.
+  [测试] Navigate to the green dumpster, go through the narrow corridor between the parked bus and the grass.
+  [测试] Head to the SUV, navigating around the fountain and the traffic cones while keeping entirely off the grass.
+  [测试] Approach the bus, squeeze past the barrier and the green dumpster without stepping on the grass.
+  [测试] Go to the trash can, pass through the narrow gap bounded by the fountain and the sidewalk lawn.
+  [测试] Proceed to the fire hydrant, traverse the constrained space between the traffic cones and the SUV, avoid grass.
+  [测试] Walk towards the white house, making sure to slip between the fountain and the barrier, while keeping off the grass.
+
+================ 评测报告 (可填入论文 6.2 节) ================
+Level1 - 测试数量: 25, 成功: 24, 准确率: 96.00%
+Level2 - 测试数量: 25, 成功: 23, 准确率: 92.00%
+Level3 - 测试数量: 25, 成功: 23, 准确率: 92.00%
+
+总计 - 测试数量: 75, 成功: 70, 平均准确率: 93.33%
