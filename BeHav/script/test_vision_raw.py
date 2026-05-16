@@ -95,12 +95,12 @@ def main():
         masked_img = cv2.addWeighted(masked_img, 1.0, color_layer, 0.4, 0)
         
         # 找重心写数字 (模拟 BehAV_raw 中画出编号)
-        y_indices, x_indices = np.where(mask_bool)
-        if len(y_indices) > 0:
-            cx, cy = int(np.mean(x_indices)), int(np.mean(y_indices))
-            # VLM 需要看数字，所以数字颜色和大小尽量明显
-            cv2.putText(masked_img, str(i+1), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255,255,255), 2)
-            cv2.putText(masked_img, str(i+1), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,0), 1)
+        # y_indices, x_indices = np.where(mask_bool)
+        # if len(y_indices) > 0:
+        #     cx, cy = int(np.mean(x_indices)), int(np.mean(y_indices))
+        #     # VLM 需要看数字，所以数字颜色和大小尽量明显
+        #     cv2.putText(masked_img, str(i+1), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255,255,255), 2)
+        #     cv2.putText(masked_img, str(i+1), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,0), 1)
             
     # 输出 Mask 结果保存
     mask_output_path = os.path.join(output_dir, "raw_logic_masked.jpg")

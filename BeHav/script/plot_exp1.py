@@ -72,7 +72,7 @@ def plot_experiment_1(log_file, vlm_log_file, output_path, start_sec=0.0):
     ax1.plot(df['relative_time'], df['hz_smooth'], color=color, linewidth=2, label='底盘控制频率 (Hz)')
     
     # 增加一个10Hz的基准参考线
-    ax1.axhline(y=10, color='blue', linestyle='--', alpha=0.5, label='10 Hz 目标基准')
+    ax1.axhline(y=7, color='blue', linestyle='--', alpha=0.5, label='7 Hz 目标基准')
     ax1.tick_params(axis='y', labelcolor=color)
     ax1.set_ylim(0, max(df['hz_smooth'].max() + 5, 15))
     
