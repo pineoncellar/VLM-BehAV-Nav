@@ -13,3 +13,9 @@ BeHav/.env
 
 # 模型文件
 BeHav/FastSAM-x.pt
+
+# 排除BeHav/scripts文件夹下，子文件中的文件
+BeHav/scripts/*
+!BeHav/scripts/*.py
+
+backup/*
