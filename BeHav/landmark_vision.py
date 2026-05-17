@@ -226,6 +226,26 @@ class LandmarkDetectorCore:
             else:
                 self.logger.info('[LandmarkDetector] final landmark reached')
 
+    def apply_blind_action(self):
+        # 原本盲开想跑3m，但因为 behav_planner 里固定会减去 2.5m 的 margin 停在目标前
+        # 为了抵消那个 margin，把盲开目标设为 3.0 + 2.5 = 5.5m，这样实际行驶就是 3m
+        distance_m = 5.5
+        bearing_deg = 0.0
+        if self.navigation_actions and self.current_landmark_index < len(self.navigation_actions):
+            action = str(self.navigation_actions[self.current_landmark_index]).lower()
+            if "right" in action or "右转" in action:
+                bearing_deg = -75.0
+            elif "left" in action or "左转" in action:
+                bearing_deg = 75.0
+            else:
+                bearing_deg = 0.0
+        self.latest_measurement = [distance_m, bearing_deg]
+        # 盲开行为（向某个方向盲走）是针对当前的，而非历史快照
+        self.latest_odom_at_vision = getattr(self, 'current_odom', None)  # Fallback will use current odom in planner if None
+        self.new_measurement_ready = True
+        if self.logger:
+            self.logger.info(f"[LandmarkDetector] Target not visible. Applying blind action: dist={distance_m}m, angle={bearing_deg}deg")
+
     # ============================================================
     # 调试可视化
     # ============================================================
@@ -408,8 +428,9 @@ class LandmarkDetectorCore:
     # ============================================================
     # 主流程
     # ============================================================
-    def process_image(self, image_bgr, depth_image=None):
+    def process_image(self, image_bgr, depth_image=None, img_odom=None):
         if self.logger: self.logger.info("Processing image...")  # 打印日志
+        self.img_odom = img_odom
         
         target_text = self.current_target_text()
         if not target_text:
@@ -424,12 +445,18 @@ class LandmarkDetectorCore:
         )
         if not response_text:
             if self.logger: self.logger.error(f"Failed to get bounding box and distance for {target_text}")  # 错误日志
+            self.apply_blind_action()
+            if self.latest_measurement:
+                self.maybe_advance_to_next_landmark(self.latest_measurement[0])
             return
 
         parsed = self.parse_vlm_response(response_text)
         if not parsed.get("visible"):
             if self.logger: 
                 self.logger.error(f"Target '{target_text}' not visible or invalid response. Raw VLM response: {response_text}")
+            self.apply_blind_action()
+            if self.latest_measurement:
+                self.maybe_advance_to_next_landmark(self.latest_measurement[0])
             return
 
         if self.logger: self.logger.info(f"Target bbox: {parsed['x_min']}, {parsed['y_min']}, {parsed['x_max']}, {parsed['y_max']}")  # 打印bounding box
@@ -442,8 +469,10 @@ class LandmarkDetectorCore:
             parsed["y_max"] is not None
         ]
         if not all(needed):
-            self.latest_measurement = None
             self.logger.info(f'[LandmarkDetector] target="{target_text}" not found')
+            self.apply_blind_action()
+            if self.latest_measurement:
+                self.maybe_advance_to_next_landmark(self.latest_measurement[0])
             return
 
         h, w = image_rgb.shape[:2]
@@ -490,6 +519,8 @@ class LandmarkDetectorCore:
             if self.logger: self.logger.info(f"Using Default Distance: {distance_m:.2f} m")
 
         self.latest_measurement = [distance_m, float(bearing)]
+        self.latest_odom_at_vision = getattr(self, 'img_odom', None)
+        self.new_measurement_ready = True
 
         self.logger.info('--------------------------------------------------')
         self.logger.info(f'Current target         : {target_text}')

@@ -44,27 +44,59 @@ class BehavPlannerCore:
         pass
 
     def process_odom(self, msg):
-        pass
+        self.latest_odom = msg
 
     def compute_velocity(self):
         """
         不再在此处计算运动学轨迹，而是将 VLM 识别出的最新距离和角度下发给 depthmap 的 far_planner 去生成轨迹。
         返回 None 以通知 ros_interface 取消原生的 cmd_vel 下发，因为 depthmap 中的 local_planner 将接管控制。
         """
-        # 增加目标距离截断：提前停留在目标物前面一段距离（例如1.5米），避免局部避障将其当成障碍物绕开
+        if not getattr(self, 'has_new_target', False):
+            return None
+        self.has_new_target = False
+
+        # 增加目标距离截断：提前停留在目标物前面一段距离，避免局部避障将其当成障碍物绕开
+        # 实际停止距离 = stop_distance_margin (1.5) + far_waypoint_planner 的 final_goal_radius (1.0) = 2.5m
         stop_distance_margin = 1.5
         adjusted_radius = max(0.0, float(self.goal_radius) - stop_distance_margin)
         
-        # 组装由 VLM 计算出的极坐标目标，下发给 Far Waypoint Planner
+        # Determine the base odom for calculating target
+        base_odom = getattr(self, 'goal_odom', None)
+        if base_odom is None:
+            base_odom = getattr(self, 'latest_odom', None)
+
         polar_msg = Point()
-        polar_msg.x = float(adjusted_radius)
-        polar_msg.y = float(self.goal_theta)
-        polar_msg.z = 0.0
+        
+        if base_odom is not None:
+            # Anchor to the absolute map location
+            px = base_odom.pose.pose.position.x
+            py = base_odom.pose.pose.position.y
+            q = base_odom.pose.pose.orientation
+            
+            # euler from quaternion
+            siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+            cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+            yaw = math.atan2(siny_cosp, cosy_cosp)
+            
+            heading = yaw + math.radians(self.goal_theta)
+            gx = px + adjusted_radius * math.cos(heading)
+            gy = py + adjusted_radius * math.sin(heading)
+            
+            polar_msg.x = float(gx)
+            polar_msg.y = float(gy)
+            polar_msg.z = 1.0 # Signal to far_waypoint_planner that this is absolute
+            mapped_type = "ABSOLUTE"
+        else:
+            # Fallback to local polar
+            polar_msg.x = float(adjusted_radius)
+            polar_msg.y = float(self.goal_theta)
+            polar_msg.z = 0.0
+            mapped_type = "POLAR"
         
         self.bridge_node.goal_pub.publish(polar_msg)
         
         if self.logger:
-            self.logger.debug(f"[BehavPlannerCore] Redirecting Target to depthmap: dist={adjusted_radius:.2f}m (raw {self.goal_radius:.2f}m), angle={self.goal_theta:.2f}deg")
+            self.logger.debug(f"[BehavPlannerCore] Redirecting Target to depthmap ({mapped_type}): coord=({polar_msg.x:.2f}, {polar_msg.y:.2f})")
             
         # 返回 Dummy_twist 让 ROS 接盘或者直接使用 None 处理
         return None

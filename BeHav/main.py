@@ -83,11 +83,11 @@ class BehavMainPipeline:
         self.detector_core.navigation_landmarks = landmark_list or []
         self.detector_core.navigation_actions = navigation_action_list or []
 
-    def process_vision_cv2(self, cv_image, depth_image=None):
+    def process_vision_cv2(self, cv_image, depth_image=None, img_odom=None):
         """
         传递给视觉追踪模块的 OpenCV 图像和深度图像
         """
-        self.detector_core.process_image(cv_image, depth_image)
+        self.detector_core.process_image(cv_image, depth_image, img_odom=img_odom)
 
     def update_sensor_data(self, image_msg=None, pointcloud_msg=None, odom_msg=None):
         """
@@ -98,6 +98,7 @@ class BehavMainPipeline:
         if pointcloud_msg is not None:
             self.behav_planner.process_pointcloud(pointcloud_msg)
         if odom_msg is not None:
+            self.latest_odom = odom_msg
             self.behav_planner.process_odom(odom_msg)
 
     def compute_control_command(self):
@@ -110,12 +111,19 @@ class BehavMainPipeline:
 
         # 2. 参考地标的直接定位情况
         meas = self.detector_core.latest_measurement
-        if meas is not None:
+        img_odom = getattr(self.detector_core, 'latest_odom_at_vision', None)
+        if meas is not None and getattr(self.detector_core, 'new_measurement_ready', False):
+            self.detector_core.new_measurement_ready = False
             distance_m, bearing_deg = meas
             # 如果地标在视野内，将其作为局部目标传递给 planner
             self.behav_planner.goal_radius = distance_m
             self.behav_planner.goal_theta = bearing_deg
+            self.behav_planner.goal_odom = img_odom
             self.behav_planner.received_final_goal_odom = False # 强制重新计算以车辆中心为基准的新目标点
+            self.behav_planner.has_new_target = True
+
+        if meas is not None:
+            distance_m, bearing_deg = meas
             if distance_m < 1.0 and cmd_msg is not None: # 如果距离目标极近，可直接发送停止指令或大幅降 低速度
                 cmd_msg.linear.x *= 0.5
                 cmd_msg.angular.z *= 0.5
