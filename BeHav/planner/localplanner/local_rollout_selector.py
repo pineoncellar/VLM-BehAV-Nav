@@ -57,7 +57,8 @@ from rclpy.parameter import Parameter
 
 from geometry_msgs.msg import PoseStamped, PoseArray
 from nav_msgs.msg import OccupancyGrid, Path
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, String, ColorRGBA
+from visualization_msgs.msg import Marker, MarkerArray
 
 
 @dataclass
@@ -154,6 +155,7 @@ class LocalRolloutSelector(Node):
         self.last_selected_rollout: Optional[Rollout] = None
         self.last_selected_path_points: Optional[np.ndarray] = None
         self.last_selected_eval: Optional[ArbiterEval] = None
+        self.last_all_evals: Optional[List[ArbiterEval]] = None
         self.local_mode: str = "INIT"
         self.no_valid_plan_count: int = 0
         self.group_scores_ema = np.zeros(7, dtype=np.float32)
@@ -224,6 +226,7 @@ class LocalRolloutSelector(Node):
 
         self.selected_pub = self.create_publisher(Path, args.selected_path_topic, 10)
         self.candidates_pub = self.create_publisher(Path, args.candidate_paths_topic, 10)
+        self.rollout_markers_pub = self.create_publisher(MarkerArray, '/local_rollout_markers', 10)
         self.local_ok_pub = self.create_publisher(Bool, args.local_planner_ok_topic, 10)
         self.local_status_pub = self.create_publisher(String, args.local_status_topic, 10)
 
@@ -356,6 +359,9 @@ class LocalRolloutSelector(Node):
         self.publish_candidate(ev.candidate, msg.header.stamp, info.frame_id)
         self.publish_local_ok(True)
         self.publish_local_status(self.local_mode)
+
+        if hasattr(self, 'last_all_evals') and self.last_all_evals is not None:
+            self.publish_colored_rollouts(self.last_all_evals, ev.candidate, msg.header.stamp, info.frame_id)
 
         self.plan_count += 1
         if self.plan_count % max(1, self.args.print_every) == 0:
@@ -524,6 +530,7 @@ class LocalRolloutSelector(Node):
             return self.hold_last_eval_if_allowed()
 
         evals = [self.evaluate_candidate_for_arbiter(c, grid, info) for c in candidates]
+        self.last_all_evals = evals
         safe = [e for e in evals if e.safe]
 
         if not safe:
@@ -1492,6 +1499,66 @@ class LocalRolloutSelector(Node):
             for x, y, yaw in rollout.points:
                 msg.poses.append(self.make_pose(float(x), float(y), float(yaw), frame_id, stamp))
         self.candidates_pub.publish(msg)
+
+    def publish_colored_rollouts(self, all_evals: List[ArbiterEval], selected_candidate: CandidatePath, stamp, frame_id: str) -> None:
+        """
+        专用于论文 3.4.2 的可视化工具：
+        红线：撞击障碍物被淘汰的轨迹
+        黄线：安全但未被选中的备选轨迹
+        绿线/加粗：最终选取的最佳轨迹
+        """
+        msg = MarkerArray()
+        
+        # 不要使用DELETEALL放在同一个msg里，它会导致RViz2闪烁或完全无法渲染当前帧的ADD
+        # 如果需要清理上一帧多余的线条，只需要确保ID覆盖即可，或者在这里删除多余的
+        
+        # 最好使用 traj_id 来唯一匹配，因为 variant_id 可能会重复（比如每个组的代表轨迹 variant_id=0）
+        selected_traj_id = selected_candidate.rollout.traj_id if selected_candidate and selected_candidate.rollout else -1
+
+        for i, ev in enumerate(all_evals):
+            if ev.candidate.rollout is None:
+                continue
+
+            marker = Marker()
+            marker.header.stamp = stamp
+            marker.header.frame_id = frame_id
+            marker.ns = "rollouts"
+            marker.id = i
+            marker.type = Marker.LINE_STRIP
+            marker.action = Marker.ADD
+            marker.pose.orientation.w = 1.0
+            
+            # 部分 RViz 版本会严格要求非零 scale，即使是 LINE_STRIP 也给 y 和 z 一个非零默认值
+            marker.scale.y = 0.01 
+            marker.scale.z = 0.01 
+
+            # --- 核心上色与调宽逻辑 ---
+            if ev.candidate.rollout.traj_id == selected_traj_id:
+                # 绿色，最粗 (选中的完美轨迹)
+                marker.scale.x = 0.08 
+                marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=1.0)
+                marker.pose.position.z = 0.1 # 抬高一点防止被遮挡
+            elif not ev.safe:
+                # 红色，细 (撞墙轨迹)
+                marker.scale.x = 0.02
+                marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=0.5)
+                marker.pose.position.z = 0.0
+            else:
+                # 黄色，中等 (安全但并非最高分的轨迹，例如压到了草地被扣分)
+                marker.scale.x = 0.04
+                marker.color = ColorRGBA(r=1.0, g=1.0, b=0.0, a=0.8)
+                marker.pose.position.z = 0.05
+
+            # 填充轨迹点
+            for x, y, yaw in ev.candidate.points:
+                p = self.make_pose(float(x), float(y), float(yaw), frame_id, stamp).pose.position
+                p.z = 0.0 # 相对于 marker.pose.position 的偏移
+                marker.points.append(p)
+
+            msg.markers.append(marker)
+
+        # 发布彩色轨迹束
+        self.rollout_markers_pub.publish(msg)
 
     def publish_empty_path(self, stamp, frame_id: str) -> None:
         msg = Path()
