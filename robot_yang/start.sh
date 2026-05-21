@@ -11,7 +11,7 @@ export DISPLAY=$DISPLAY
 WAIT_TIME=4
 
 # 提取模型（World）名称为变量，方便后续修改
-WORLD_NAME="street.world"
+WORLD_NAME="street2.world"
 # 动态拼凑绝对路径
 WORLD_PATH="$(pwd)/world/$WORLD_NAME"
 
