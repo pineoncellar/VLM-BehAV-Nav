@@ -1,4 +1,10 @@
 #!/bin/bash
+
+# ================= Configuration =================
+# 设为 true 时，MPC Tracker不会下发 /cmd_vel 控制指令，小车将保持静止，方便纯规划算法的调试
+DISABLE_CONTROL=true
+# =================================================
+
 WORKSPACE_SETUP="../robot_yang/install/setup.bash"
 if [ -f "$WORKSPACE_SETUP" ]; then
     source "$WORKSPACE_SETUP"
@@ -63,9 +69,14 @@ cd ../..
 sleep 2
 echo "[4/4] Starting MPC Tracker..."
 cd planner/localplanner
-python3 ackermann_mpc_tracker.py \
-  --far-goal-reached-topic /far/goal_reached \
-  --max-speed 0.5 &
+
+MPC_ARGS="--far-goal-reached-topic /far/goal_reached --max-speed 0.5"
+if [ "$DISABLE_CONTROL" = "true" ]; then
+  MPC_ARGS="$MPC_ARGS --disable-control"
+  echo "⚠️ [DEBUG MODE] Control commands (/cmd_vel) are DISABLED. The robot will not move."
+fi
+
+python3 ackermann_mpc_tracker.py $MPC_ARGS &
 cd ../..
 echo "=========================================================="
 echo "ROS Base Planning Pipeline is running in the background."

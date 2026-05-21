@@ -201,7 +201,8 @@ class AckermannMPCTracker(Node):
         msg.angular.x = 0.0
         msg.angular.y = 0.0
         msg.angular.z = float(yaw_rate)
-        self.cmd_pub.publish(msg)
+        if not self.args.disable_control:
+            self.cmd_pub.publish(msg)
 
     # ------------------------------------------------------------------
     # MPC-style rollout solver
@@ -353,7 +354,8 @@ class AckermannMPCTracker(Node):
         msg = Twist()
         msg.linear.x = 0.0
         msg.angular.z = 0.0
-        self.cmd_pub.publish(msg)
+        if not self.args.disable_control:
+            self.cmd_pub.publish(msg)
 
     # ------------------------------------------------------------------
     # Math helpers
@@ -386,6 +388,7 @@ def parse_args():
     parser.add_argument("--far-goal-reached-topic", default="/far_goal_reached")
     parser.add_argument("--use-sim-time", dest="use_sim_time", action="store_true", default=True)
     parser.add_argument("--no-sim-time", dest="use_sim_time", action="store_false")
+    parser.add_argument("--disable-control", action="store_true", help="If set, do not publish to /cmd_vel")
 
     # Vehicle model.
     parser.add_argument("--wheelbase", type=float, default=0.65)
