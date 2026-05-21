@@ -17,7 +17,7 @@ fi
 # ==============================================================
 export SKIP_NLP=1
 
-export PRESET_LANDMARKS='["fire hydrant", "post office"]'
+export PRESET_LANDMARKS='["fire hydrant", "bus"]'
 export PRESET_NAV_ACTIONS='["go straight", "turn right", "keep walking", "stop"]'
 export PRESET_BEHAV_ACTIONS='["avoid stepping on", "walk on"]'
 export PRESET_BEHAV_TARGETS='["grass", "road"]'
