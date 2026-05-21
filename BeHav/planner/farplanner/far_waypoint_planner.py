@@ -219,6 +219,12 @@ class FarWaypointPlanner(Node):
         #     self.fix_far_goal_from_polar()
 
     def polar_goal_callback(self, msg: Point) -> None:
+        if msg.z == 1.0:
+            self.far_goal_odom = Point2(msg.x, msg.y)
+            self.goal_reached = False
+            self.get_logger().info(f"Updated absolute goal from BeHav: x={msg.x:.2f}, y={msg.y:.2f}")
+            return
+            
         if self.robot_x is None or self.robot_y is None or self.robot_yaw is None:
             return
         distance = msg.x
