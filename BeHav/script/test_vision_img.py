@@ -233,6 +233,25 @@ def main():
         save_path = os.path.join(output_dir, "vision_pipeline_6_steps.png")
         plt.savefig(save_path)
         logger.info(f"Pipeline output saved to {save_path}")
+
+        # 额外输出：左边RGB图，右边FastSAM生成的掩膜图
+        plt.figure(figsize=(16, 8))
+        plt.subplot(121)
+        plt.imshow(img_a)
+        plt.title("RGB图像", fontsize=16)
+        plt.axis('off')
+
+        plt.subplot(122)
+        if img_c is not None:
+            plt.imshow(img_c)
+        plt.title("FastSAM掩膜图", fontsize=16)
+        plt.axis('off')
+
+        plt.tight_layout()
+        save_path_2 = os.path.join(output_dir, "rgb_and_fastsam.png")
+        plt.savefig(save_path_2)
+        logger.info(f"RGB and FastSAM output saved to {save_path_2}")
+        
         plt.show()
 
     except Exception as e:
