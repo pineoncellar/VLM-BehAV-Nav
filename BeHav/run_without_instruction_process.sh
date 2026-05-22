@@ -22,5 +22,13 @@ export PRESET_NAV_ACTIONS='["go straight", "turn right", "keep walking", "stop"]
 export PRESET_BEHAV_ACTIONS='["avoid stepping on", "walk on"]'
 export PRESET_BEHAV_TARGETS='["grass", "road"]'
 
+# ==============================================================
+# 视觉模块参数配置
+# ==============================================================
+# 是否使用 FastSAM 独立显卡进行分割 (true/false)
+export USE_FASTSAM="false"
+# 深度连续性突变判定阈值 (米)。相邻深度差大于此值则认为是不同物体 (如人与巴士分离)。
+export CLUSTER_GAP="0.5"
+
 # 启动节点
 uv run python3 ros_interface.py

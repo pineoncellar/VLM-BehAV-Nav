@@ -29,13 +29,21 @@ class LandmarkDetectorCore:
         self.navigation_landmarks = []
 
         # ========= 新增 FastSAM 初始化 =========
-        from ultralytics import FastSAM
-        import torch
+        # [开关] 设置为 True 使用 FastSAM 分割，False 使用深度直方图测距
+        self.use_fastsam = os.getenv("USE_FASTSAM", "False").lower() in ["true", "1", "t", "yes", "y"]
+        self.cluster_gap = float(os.getenv("CLUSTER_GAP", "0.8"))
 
-        if self.logger:
-            self.logger.info('Initializing FastSAM model...')
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.fastsam_model = FastSAM("FastSAM-x.pt")
+        if self.use_fastsam:
+            from ultralytics import FastSAM
+            import torch
+
+            if self.logger:
+                self.logger.info('Initializing FastSAM model...')
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.fastsam_model = FastSAM("FastSAM-x.pt")
+        else:
+            if self.logger:
+                self.logger.info('FastSAM disabled, using lightweight depth histogram method.')
         
         # 相机内参配置
         # 参考常见 Gazebo 内配，具体需要依照你在模型中的数值，否则测距存在偏差
@@ -214,6 +222,89 @@ class LandmarkDetectorCore:
         centroid = (int(u_c), int(v_c))
         
         return distance_d, mask, centroid
+
+    def calculate_physical_distance_histogram(self, bbox, depth_img):
+        """
+        基于深度直方图峰值的轻量级测距算法，替代 FastSAM
+        """
+        x_min, y_min, x_max, y_max = bbox
+        
+        # 截取 BBox 内的深度数据
+        crop_depths = depth_img[y_min:y_max, x_min:x_max]
+        
+        # 过滤无效点 (负数、0、极大值、NaN 等 Gazebo 产生的无效深度)
+        valid_mask = (crop_depths > 0.0) & (crop_depths < 100.0) & (~np.isnan(crop_depths)) & (~np.isinf(crop_depths))
+        valid_depths = crop_depths[valid_mask]
+        
+        if len(valid_depths) == 0:
+            return None, None, None
+
+        # --- 第一步：动态带宽与密度聚类 (DBSCAN / 均值漂移平替) ---
+        # 对于大角度倾斜的大体积物体，深度分布呈现“宽扁”的长尾（可能跨越上米）。
+        # 如果仍用固定 0.5m 桶宽的主峰法，一辆巴士可能会被切碎成好几段，掩膜支离破碎。
+        # 解决方案：放弃固定直方图分桶，使用基于 KDE (核密度估计) / KNN 的自适应一维滑动聚类。
+
+        # 将深度排序
+        sorted_depths = np.sort(valid_depths)
+        
+        # 寻找平滑区域（最大密集子集群）
+        # 参数: cluster_gap 决定两个点之间差多远才算“断层”了（例如人与巴士的断层，或是墙的断层）
+        # 因为斜着的巴士内部是“连续渐变”的（跨越再大每次变化也很小），而断层是突变的
+        cluster_gap = self.cluster_gap  # 最大允许间隙（米）
+        
+        clusters = []
+        current_cluster = [sorted_depths[0]]
+        
+        for i in range(1, len(sorted_depths)):
+            if sorted_depths[i] - sorted_depths[i-1] <= cluster_gap:
+                current_cluster.append(sorted_depths[i])
+            else:
+                clusters.append(current_cluster)
+                current_cluster = [sorted_depths[i]]
+        clusters.append(current_cluster)
+        
+        # 找到包含像素最多的那个“连续簇”(通常主导 BBox 面积的)
+        largest_cluster = max(clusters, key=len)
+        lower_bound = largest_cluster[0]
+        upper_bound = largest_cluster[-1]
+        
+        # 为了防止极端的斜面带来的两端噪点，我们取这个主簇的 20%~80% 核心区来评估代表深度
+        p20 = np.percentile(largest_cluster, 20)
+        p80 = np.percentile(largest_cluster, 80)
+        core_cluster = [d for d in largest_cluster if p20 <= d <= p80]
+        
+        z_target = float(np.median(core_cluster))
+
+        # --- 第二步：根据连续簇极值提取对应的 Mask 并计算 2D 质心 ---
+        # 采用提取到的连续簇上下界 (宽容一部分边缘)
+        target_mask_crop = valid_mask & (crop_depths >= lower_bound - 0.2) & (crop_depths >= p20 - 1.0) & (crop_depths <= upper_bound + 0.2)
+        
+        # 生成基于整个图像大小的 Mask
+        mask = np.zeros(depth_img.shape[:2], dtype=bool)
+        mask[y_min:y_max, x_min:x_max] = target_mask_crop
+        
+        # 找到这块掩膜的实际质心 (比用 BBox 中心更稳定，能避开前方的遮挡物)
+        y_indices, x_indices = np.where(mask)
+        if len(x_indices) > 0 and len(y_indices) > 0:
+            u_c = int(np.mean(x_indices))
+            v_c = int(np.mean(y_indices))
+        else:
+            u_c = int((x_min + x_max) / 2)
+            v_c = int((y_min + y_max) / 2)
+            
+        # --- 第三步：通过内参进行针孔逆投影，计算真正的 3D 距离 ---
+        fx = self.intrinsics['fx']
+        fy = self.intrinsics['fy']
+        cx = self.intrinsics['cx']
+        cy = self.intrinsics['cy']
+        
+        X = (u_c - cx) * z_target / fx
+        Y = (v_c - cy) * z_target / fy
+        Z = z_target
+        
+        distance_d = float(np.sqrt(X**2 + Y**2 + Z**2))
+        
+        return distance_d, mask, (u_c, v_c)
 
     def maybe_advance_to_next_landmark(self, distance_m):
         if distance_m is None:
@@ -496,10 +587,13 @@ class LandmarkDetectorCore:
 
         bbox = [x_min, y_min, x_max, y_max]
 
-        # 尝试使用 FastSAM 和深度图获取物理距离
+        # 根据开关选择深度测距方案
         real_distance, target_mask, centroid = None, None, None
         if depth_image is not None:
-            real_distance, target_mask, centroid = self.calculate_physical_distance(bbox, image_rgb, depth_image)
+            if getattr(self, 'use_fastsam', False):
+                real_distance, target_mask, centroid = self.calculate_physical_distance(bbox, image_rgb, depth_image)
+            else:
+                real_distance, target_mask, centroid = self.calculate_physical_distance_histogram(bbox, depth_image)
 
         if centroid:
             x, y = centroid
