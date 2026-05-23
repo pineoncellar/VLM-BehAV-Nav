@@ -349,20 +349,27 @@ class LandmarkDetectorCore:
                 prev_target = self.current_target_text()
                 self.current_landmark_index += 1
                 self.logger.info(f'[LandmarkDetector] reached "{prev_target}", switch to "{self.current_target_text()}"')
+                
+                # 判断当前动作是否是左转或右转
+                if self.navigation_actions and self.current_landmark_index < len(self.navigation_actions):
+                    action = str(self.navigation_actions[self.current_landmark_index]).lower()
+                    if "right" in action or "右转" in action or "left" in action or "左转" in action:
+                        self.logger.info(f"[LandmarkDetector] Next action is '{action}'. Applying blind action directly!")
+                        self.apply_blind_action()
             else:
                 self.logger.info('[LandmarkDetector] final landmark reached')
 
     def apply_blind_action(self):
         # 原本盲开想跑3m，但因为 behav_planner 里固定会减去 2.5m 的 margin 停在目标前
         # 为了抵消那个 margin，把盲开目标设为 3.0 + 2.5 = 5.5m，这样实际行驶就是 3m
-        distance_m = 5.5
+        distance_m = 5
         bearing_deg = 0.0
         if self.navigation_actions and self.current_landmark_index < len(self.navigation_actions):
             action = str(self.navigation_actions[self.current_landmark_index]).lower()
             if "right" in action or "右转" in action:
-                bearing_deg = -75.0
+                bearing_deg = -85.0
             elif "left" in action or "左转" in action:
-                bearing_deg = 75.0
+                bearing_deg = 85.0
             else:
                 bearing_deg = 0.0
         self.latest_measurement = [distance_m, bearing_deg]

@@ -143,7 +143,8 @@ class LandmarkDetectorNode(Node):
         self.pipeline.on_vision_image = lambda cv_bgr: setattr(self, 'latest_vision_image_bgr', cv_bgr)
 
         # 3. Timers
-        self.timer = self.create_timer(self.period_sec, self.timer_callback)
+        self.last_process_time = 0.0
+        self.timer = self.create_timer(0.5, self.timer_callback)
         self.control_timer = self.create_timer(self.control_period_sec, self.control_loop)
         self.vision_pub_timer = self.create_timer(1.0 / 5.0, self.vision_pub_loop) # 5Hz publish
         
@@ -198,9 +199,12 @@ class LandmarkDetectorNode(Node):
 
     def timer_callback(self):
         if self.latest_image is None or self.is_processing:
-            self.dual_logger.info("No image or already processing...")
+            return
+            
+        if time.time() - self.last_process_time < self.period_sec:
             return
 
+        self.last_process_time = time.time()
         self.dual_logger.info("Starting image processing...")
         self.is_processing = True
         import threading
