@@ -576,10 +576,15 @@ class LandmarkDetectorCore:
 
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
 
+        t_vlm_start = time.time()
         response_text = self.query_target_bbox_and_distance(
             image_rgb=image_rgb,
             target_text=target_text
         )
+        t_vlm_end = time.time()
+        if self.logger:
+            self.logger.info(f'[Timing] VLM API Request took {t_vlm_end - t_vlm_start:.4f} seconds')
+            
         if not response_text:
             if self.logger: self.logger.error(f"Failed to get bounding box and distance for {target_text}")  # 错误日志
             if self.on_vision_image is not None:
