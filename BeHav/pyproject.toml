@@ -14,4 +14,5 @@ dependencies = [
     "Pillow",
     "ultralytics>=8.4.46",
     "pandas>=2.3.3",
+    "httpx[socks]>=0.28.1",
 ]
