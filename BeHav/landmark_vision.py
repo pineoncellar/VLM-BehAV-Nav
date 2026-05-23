@@ -10,6 +10,8 @@ from textwrap import dedent
 import requests
 from requests.exceptions import RequestException
 import cv2
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from PIL import Image as PILImage
