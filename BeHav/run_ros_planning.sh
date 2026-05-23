@@ -2,7 +2,7 @@
 
 # ================= Configuration =================
 # 设为 true 时，MPC Tracker不会下发 /cmd_vel 控制指令，小车将保持静止，方便纯规划算法的调试
-DISABLE_CONTROL=true
+DISABLE_CONTROL=false
 # =================================================
 
 WORKSPACE_SETUP="../robot_yang/install/setup.bash"
