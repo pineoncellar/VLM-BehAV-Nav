@@ -7,4 +7,5 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy>=2.2.6",
     "opencv-python>=4.13.0.92",
+    "tqdm>=4.67.3",
 ]
