@@ -42,8 +42,8 @@ def get_instruction_breakdown(language_instruction):
     Input: "Walk straight to the SUV, you must pass through the narrow path between the grass and the trash cans."
     Output: {{"landmarks": ["SUV"], "navigation_actions": ["walk straight"], "behavioral_actions": ["pass through"], "behavioral_targets": ["narrow path", "grass", "trash cans"]}}
 
-    Input: "Approach the white house, passing carefully between the fountain and the grass, while staying on the road."
-    Output: {{"landmarks": ["white house"], "navigation_actions": ["approach"], "behavioral_actions": ["pass carefully between", "staying on"], "behavioral_targets": ["fountain", "grass", "road"]}}
+    Input: "Walk on the road, avoid the grass, go straight to the fire hydrant, then turn right and approach the parked bus."
+    Output: {{"landmarks": ["fire hydrant", "parked bus"], "navigation_actions": ["go straight", "turn right", "approach"], "behavioral_actions": ["walk on", "avoid"], "behavioral_targets": ["road", "grass"]}}
 
     Input: "Navigate to the bus, pass between the green dumpster and the lawn without touching the grass."
     Output: {{"landmarks": ["bus"], "navigation_actions": ["navigate to"], "behavioral_actions": ["pass between", "without touching"], "behavioral_targets": ["green dumpster", "lawn", "grass"]}}
