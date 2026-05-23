@@ -11,6 +11,10 @@ def main():
     parser.add_argument('--x-max', type=float, default=1.0, help='Max x ratio (0-1), default 1.0')
     parser.add_argument('--y-min', type=float, default=0.0, help='Min y ratio (0-1), default 0.0')
     parser.add_argument('--y-max', type=float, default=1.0, help='Max y ratio (0-1), default 1.0')
+    parser.add_argument('--draw-circle', type=int, default=0, choices=[0, 1], help='Whether to draw a circle on the car (1 for yes, 0 for no), default 0')
+    parser.add_argument('--traj-thickness', type=int, default=2, help='Thickness of the trajectory line, default 2')
+    parser.add_argument('--circle-radius', type=int, default=15, help='Radius of the drawn circle, default 15')
+    parser.add_argument('--circle-thickness', type=int, default=2, help='Thickness of the drawn circle, default 2')
     args = parser.parse_args()
 
     input_dir = 'input'
@@ -106,11 +110,12 @@ def main():
                     cX = int(M["m10"] / M["m00"])
                     cY = int(M["m01"] / M["m00"])
                     trajectory_points.append((cX, cY))
-                    cv2.circle(frame, (cX, cY), 15, (0, 255, 255), 2)
+                    if args.draw_circle == 1:
+                        cv2.circle(frame, (cX, cY), args.circle_radius, (0, 255, 255), args.circle_thickness)
 
             if len(trajectory_points) > 1:
                 for i in range(1, len(trajectory_points)):
-                    cv2.line(frame, trajectory_points[i-1], trajectory_points[i], (0, 255, 0), thickness=4)
+                    cv2.line(frame, trajectory_points[i-1], trajectory_points[i], (0, 255, 0), thickness=args.traj_thickness)
 
             out.write(frame)
             pbar.update(1)
