@@ -134,14 +134,18 @@ class LandmarkDetectorNode(Node):
         self.cmd_pub = self.create_publisher(Twist, self.cmd_topic, 10)
         self.behav_costmap_pub = self.create_publisher(Image, '/behav_costmap', 10)
         self.traj_image_pub = self.create_publisher(Image, '/traj_marked_image', 10)
+        self.vision_image_pub = self.create_publisher(Image, '/vision_marked_image', 10)
 
         # 把 pipeline 的图像结果绑定到 ROS 原生发布对象上
+        self.latest_vision_image_bgr = None
         self.pipeline.on_behav_costmap = lambda m: self.behav_costmap_pub.publish(m)
         self.pipeline.on_traj_image = lambda m: self.traj_image_pub.publish(m)
+        self.pipeline.on_vision_image = lambda cv_bgr: setattr(self, 'latest_vision_image_bgr', cv_bgr)
 
         # 3. Timers
         self.timer = self.create_timer(self.period_sec, self.timer_callback)
         self.control_timer = self.create_timer(self.control_period_sec, self.control_loop)
+        self.vision_pub_timer = self.create_timer(1.0 / 5.0, self.vision_pub_loop) # 5Hz publish
         
         self.latest_image = None
         self.latest_depth_image = None
@@ -215,6 +219,17 @@ class LandmarkDetectorNode(Node):
         if msg is not None:
             self.cmd_pub.publish(msg)
             self.dual_logger.debug(f"==> [ros_interface] Publishing CMD: {msg.linear.x}, {msg.angular.z}")
+
+    def vision_pub_loop(self):
+        """
+        以 5Hz 的频率持续向外发布最新保存好的带状态标注帧，防止 RViz 断流或画面跳变闪烁
+        """
+        if getattr(self, 'latest_vision_image_bgr', None) is not None:
+            try:
+                img_msg = self.bridge.cv2_to_imgmsg(self.latest_vision_image_bgr, encoding="bgr8")
+                self.vision_image_pub.publish(img_msg)
+            except CvBridgeError as e:
+                self.dual_logger.error(f'cv_bridge publish error: {str(e)}')
 
 def run_instruction_pipeline():
     """测试用，可直接调用 Pipeline 单次测试 NLP 并获取行为 costs"""

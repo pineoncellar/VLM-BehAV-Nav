@@ -93,10 +93,14 @@ class LandmarkDetectorCore:
         self.latest_image = None
         self.latest_measurement = None   # [distance_m, bearing_deg]
         self.is_processing = False
+        self.last_annotated_image_bgr = None  # 保存最后一次成功检测的附带框的图像
 
         self.max_retries = 3
         self.delay = 5
         self.latest_measurement = None
+        
+        # 外部回调接口，发布视觉检测带标注的图片
+        self.on_vision_image = None
 
         # ROS 订阅和定时器 (Moved to interface node)
         # self.bridge = CvBridge()
@@ -106,6 +110,23 @@ class LandmarkDetectorCore:
     # ============================================================
     # 基础函数
     # ============================================================
+    def add_status_banner(self, image_bgr, text):
+        img_copy = image_bgr.copy()
+        h, w = img_copy.shape[:2]
+        banner_h = 40
+        overlay = img_copy.copy()
+        cv2.rectangle(overlay, (0, h - banner_h), (w, h), (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.6, img_copy, 0.4, 0, img_copy)
+        # Font settings
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.8
+        thickness = 2
+        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+        text_x = (w - text_size[0]) // 2
+        text_y = h - (banner_h - text_size[1]) // 2 + 5
+        cv2.putText(img_copy, text, (text_x, text_y), font, font_scale, (0, 255, 255), thickness)
+        return img_copy
+
     def current_target_text(self) -> str:
         if self.current_landmark_index < len(self.navigation_landmarks):
             return self.navigation_landmarks[self.current_landmark_index]
@@ -169,6 +190,8 @@ class LandmarkDetectorCore:
         基于 FastSAM 掩膜提取和深度图中值的 3D 距离测算。
         bbox 格式 [x_min, y_min, x_max, y_max]
         """
+        t_start = time.time()
+        
         # 第一步：FastSAM 掩膜生成
         results = self.fastsam_model(
             rgb_img,
@@ -221,12 +244,18 @@ class LandmarkDetectorCore:
         distance_d = float(np.sqrt(X**2 + Y**2 + Z**2))
         centroid = (int(u_c), int(v_c))
         
+        t_end = time.time()
+        if self.logger:
+            self.logger.info(f'[Timing] FastSAM depth calculation took {t_end - t_start:.4f} seconds')
+            
         return distance_d, mask, centroid
 
     def calculate_physical_distance_histogram(self, bbox, depth_img):
         """
         基于深度直方图峰值的轻量级测距算法，替代 FastSAM
         """
+        t_start = time.time()
+        
         x_min, y_min, x_max, y_max = bbox
         
         # 截取 BBox 内的深度数据
@@ -304,6 +333,10 @@ class LandmarkDetectorCore:
         
         distance_d = float(np.sqrt(X**2 + Y**2 + Z**2))
         
+        t_end = time.time()
+        if self.logger:
+            self.logger.info(f'[Timing] Histogram/Clustering depth calculation took {t_end - t_start:.4f} seconds')
+            
         return distance_d, mask, (u_c, v_c)
 
     def maybe_advance_to_next_landmark(self, distance_m):
@@ -521,6 +554,17 @@ class LandmarkDetectorCore:
     # ============================================================
     def process_image(self, image_bgr, depth_image=None, img_odom=None):
         if self.logger: self.logger.info("Processing image...")  # 打印日志
+        
+        # 决定底图：如果之前有成功的检测框图片则复用（保持框和之前的画面一致），否则用新接收到的干净图
+        base_img_for_banner = getattr(self, 'last_annotated_image_bgr', None)
+        if base_img_for_banner is None:
+            base_img_for_banner = image_bgr
+
+        # 发布处理中图像到回调口
+        if self.on_vision_image is not None:
+            proc_bgr = self.add_status_banner(base_img_for_banner, "[Processing image...]")
+            self.on_vision_image(proc_bgr)
+            
         self.img_odom = img_odom
         
         target_text = self.current_target_text()
@@ -536,6 +580,8 @@ class LandmarkDetectorCore:
         )
         if not response_text:
             if self.logger: self.logger.error(f"Failed to get bounding box and distance for {target_text}")  # 错误日志
+            if self.on_vision_image is not None:
+                self.on_vision_image(self.add_status_banner(base_img_for_banner, "[Detection Failed - VLM Error]"))
             self.apply_blind_action()
             if self.latest_measurement:
                 self.maybe_advance_to_next_landmark(self.latest_measurement[0])
@@ -545,6 +591,8 @@ class LandmarkDetectorCore:
         if not parsed.get("visible"):
             if self.logger: 
                 self.logger.error(f"Target '{target_text}' not visible or invalid response. Raw VLM response: {response_text}")
+            if self.on_vision_image is not None:
+                self.on_vision_image(self.add_status_banner(base_img_for_banner, f"[Target '{target_text}' Not Visible]"))
             self.apply_blind_action()
             if self.latest_measurement:
                 self.maybe_advance_to_next_landmark(self.latest_measurement[0])
@@ -561,6 +609,8 @@ class LandmarkDetectorCore:
         ]
         if not all(needed):
             self.logger.info(f'[LandmarkDetector] target="{target_text}" not found')
+            if self.on_vision_image is not None:
+                self.on_vision_image(self.add_status_banner(base_img_for_banner, f"[Target '{target_text}' not found]"))
             self.apply_blind_action()
             if self.latest_measurement:
                 self.maybe_advance_to_next_landmark(self.latest_measurement[0])
@@ -632,5 +682,13 @@ class LandmarkDetectorCore:
                 original_img_rgb=image_rgb,
                 circled_img_rgb=circled_img_rgb
             )
+
+        # 发布目标已更新图像到回调口
+        if self.on_vision_image is not None:
+            circled_img_bgr = cv2.cvtColor(circled_img_rgb, cv2.COLOR_RGB2BGR)
+            # 成功保存这次带有框和检测标注的完美图片作为“缓存快照”底图
+            self.last_annotated_image_bgr = circled_img_bgr.copy()
+            updated_bgr = self.add_status_banner(circled_img_bgr, "[Target Updated]")
+            self.on_vision_image(updated_bgr)
 
         self.maybe_advance_to_next_landmark(distance_m)

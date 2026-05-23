@@ -19,10 +19,14 @@ class BehavMainPipeline:
         # 用于输出可视化的回调函数（供 ROS 接口绑定）
         self.on_behav_costmap = None
         self.on_traj_image = None
+        self.on_vision_image = None
         
         # 绑定 BehavPlannerCore 的可视化输出到本类的分发口
         self.behav_planner.on_behav_costmap = self._distribute_costmap
         self.behav_planner.on_traj_image = self._distribute_traj
+        
+        # 绑定 LandmarkDetectorCore 的可视化输出到本类的分发口
+        self.detector_core.on_vision_image = self._distribute_vision
 
     def _distribute_costmap(self, msg):
         if self.on_behav_costmap:
@@ -31,6 +35,10 @@ class BehavMainPipeline:
     def _distribute_traj(self, msg):
         if self.on_traj_image:
             self.on_traj_image(msg)
+
+    def _distribute_vision(self, img_bgr):
+        if self.on_vision_image:
+            self.on_vision_image(img_bgr)
 
     def run_instruction_reasoning(self, language_instruction='Walk to the red car and stop in front of it', skip_nlp=False):
         """
