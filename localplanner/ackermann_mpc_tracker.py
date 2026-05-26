@@ -63,6 +63,16 @@ class AckermannMPCTracker(Node):
         )
         self.cmd_pub = self.create_publisher(Twist, args.cmd_vel_topic, 10)
 
+        self.cmd_vel_log = None
+        if getattr(self.args, "log_cmd_vel_file", ""):
+            import os
+            try:
+                os.makedirs(os.path.dirname(self.args.log_cmd_vel_file), exist_ok=True)
+                self.cmd_vel_log = open(self.args.log_cmd_vel_file, "a")
+                self.cmd_vel_log.write("timestamp,linear_x,angular_z\n")
+            except Exception as e:
+                self.get_logger().error(f"Failed to open cmd vel log file: {e}")
+
         self.timer = self.create_timer(1.0 / max(args.control_hz, 1e-3), self.control_timer)
 
         self.get_logger().info("ackermann_mpc_tracker.py started")
@@ -188,8 +198,13 @@ class AckermannMPCTracker(Node):
         msg = Twist()
         msg.linear.x = float(v_cmd)
         msg.angular.z = float(yaw_rate)
-        self.cmd_pub.publish(msg)
-        self.get_logger().info(f"Published cmd_vel: linear.x={v_cmd:.3f}, angular.z={yaw_rate:.3f}")
+        self.publish_twist(msg)
+        
+        log_file = getattr(self.args, "log_cmd_vel_file", "")
+        if log_file:
+            self.get_logger().info(f"Logged cmd_vel (intercepted): linear.x={v_cmd:.3f}, angular.z={yaw_rate:.3f}")
+        else:
+            self.get_logger().info(f"Published cmd_vel: linear.x={v_cmd:.3f}, angular.z={yaw_rate:.3f}")
 
     def solve_mpc(self, path_xy: np.ndarray, path_yaw: np.ndarray) -> Optional[Candidate]:
         nominal_speed = self.compute_nominal_speed(path_xy)
@@ -305,6 +320,25 @@ class AckermannMPCTracker(Node):
         diffs = np.diff(path_xy, axis=0)
         return float(np.sum(np.linalg.norm(diffs, axis=1)))
 
+    def publish_twist(self, msg: Twist) -> None:
+        disabled = getattr(self.args, "disable_control", False)
+        log_file = getattr(self.args, "log_cmd_vel_file", "")
+        
+        if self.cmd_vel_log:
+            try:
+                timestamp = time.time()
+                self.cmd_vel_log.write(f"{timestamp:.6f},{msg.linear.x:.6f},{msg.angular.z:.6f}\n")
+                self.cmd_vel_log.flush()
+            except Exception:
+                pass
+                
+        if log_file:
+            # When logging only, don't publish
+            return
+            
+        if not disabled:
+            self.cmd_pub.publish(msg)
+
     def publish_stop(self) -> None:
         self.get_logger().info("publish_stop called")
         self.last_cmd_v = 0.0
@@ -312,7 +346,7 @@ class AckermannMPCTracker(Node):
         msg = Twist()
         msg.linear.x = 0.0
         msg.angular.z = 0.0
-        self.cmd_pub.publish(msg)
+        self.publish_twist(msg)
         self.get_logger().info("Published stop (zero velocity)")
 
     # Math helpers
@@ -375,6 +409,9 @@ def parse_args():
 
     parser.add_argument("--terminal-lookahead", type=float, default=1.8)
     parser.add_argument("--progress-lookahead", type=float, default=1.2)
+
+    parser.add_argument("--disable-control", action="store_true", default=False)
+    parser.add_argument("--log-cmd-vel-file", type=str, default="")
 
     args, ros_args = parser.parse_known_args()
     return args, ros_args

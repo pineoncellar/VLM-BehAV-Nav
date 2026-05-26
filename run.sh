@@ -11,6 +11,7 @@ set -e
 
 # ----------------- 1. 配置与多节点进程管理 -----------------
 DISABLE_CONTROL=false       # 设为 true 时，底层 MPC 仅规划不发 /cmd_vel 代码控制，用于安全调试小车
+LOG_CMD_VEL_ONLY=true       # 设为 true 时，系统不会真的发布/cmd_vel，而是将时间戳与对应的指令记录到日志文件中
 LAUNCH_PLANNER=true         # 是否在当前脚本中一同拉起 Planner 部分
 
 pids=()
@@ -28,6 +29,9 @@ trap cleanup INT TERM EXIT
 # ----------------- 2. 加载工作空间及 Python 运行虚拟环境 -----------------
 # 切换至脚本当前所在目录确保工作区相对路径无冲突
 cd "$(dirname "$0")"
+
+# 确保 output 目录存在
+mkdir -p output
 
 # Source 机器人的仿真或实机运行工作空间 (robot_yang / tita_sdk)
 WORKSPACE_SETUP="./robot_yang/install/setup.bash"
@@ -118,6 +122,12 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
     if [ "$DISABLE_CONTROL" = "true" ]; then
         MPC_ARGS="$MPC_ARGS --disable-control"
         echo "⚠️ [DEBUG MODE] Control commands (/cmd_vel) are DISABLED. The robot will not move."
+    fi
+    if [ "$LOG_CMD_VEL_ONLY" = "true" ]; then
+        START_TIME=$(date +%Y%m%d_%H%M%S)
+        LOG_FILE_PATH="$PWD/output/cmd_vel_${START_TIME}.log"
+        MPC_ARGS="$MPC_ARGS --log-cmd-vel-file $LOG_FILE_PATH"
+        echo "⚠️ [LOG MODE] Control commands (/cmd_vel) intercept to log: output/cmd_vel_${START_TIME}.log"
     fi
     python3 localplanner/ackermann_mpc_tracker.py $MPC_ARGS &
     pids+=($!)
