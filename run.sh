@@ -2,7 +2,7 @@
 set -e
 
 # =========================================================================
-# VLM-BehAV-Nav 统一整合启动脚本 (vlm_behav_nav_all_in_one.sh)
+# VLM-BehAV-Nav 统一整合启动脚本
 #
 # 此脚本统一整合并启动：
 #   1. ROS 2 底层规划管线 (几何与语义建图、Far 路径寻路器、Local 局路探测野簇评分、底层 MPC 控制器)
@@ -15,8 +15,8 @@ LOG_CMD_VEL_ONLY=true       # 设为 true 时，系统不会真的发布/cmd_vel
 LAUNCH_PLANNER=true         # 是否在当前脚本中一同拉起 Planner 部分
 
 # 相机话题配置
-CAMERA_RGB_TOPIC="/camera/color/image_raw"
-CAMERA_DEPTH_TOPIC="/camera/depth/image_raw"
+CAMERA_RGB_TOPIC="/virtual_camera/color/image_raw"
+CAMERA_DEPTH_TOPIC="/virtual_camera/depth/image_raw"
 
 pids=()
 cleanup() {
@@ -77,7 +77,7 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
     echo "=========================================================="
 
     # 4.2 改良版远端大航路寻优器（开启了 --behav-mode 动态目标监听模式）
-    python3 farplanner/far_waypoint_planner.py \
+    uv run python3 farplanner/far_waypoint_planner.py \
       --current-waypoint-local-topic /far/current_waypoint_local \
       --local-plan-topic /far/local_plan \
       --reference-path-topic /far/reference_path_local \
@@ -92,7 +92,7 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
     sleep 2
 
     # 4.3 改良版车辆局部采样横摆规避与打分器 (具有车辆物理、语义占据格高弹性容差)
-    python3 localplanner/local_rollout_selector.py \
+    uv run python3 localplanner/local_rollout_selector.py \
       --current-waypoint-local-topic /far/current_waypoint_local \
       --far-local-plan-topic /far/local_plan \
       --reference-path-topic /far/reference_path_local \
@@ -133,7 +133,7 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
         MPC_ARGS="$MPC_ARGS --log-cmd-vel-file $LOG_FILE_PATH"
         echo "⚠️ [LOG MODE] Control commands (/cmd_vel) intercept to log: output/cmd_vel_${START_TIME}.log"
     fi
-    python3 localplanner/ackermann_mpc_tracker.py $MPC_ARGS &
+    uv run python3 localplanner/ackermann_mpc_tracker.py $MPC_ARGS &
     pids+=($!)
     sleep 2
 fi

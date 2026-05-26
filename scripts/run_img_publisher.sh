@@ -11,7 +11,7 @@ echo "Starting Image Publisher Node..."
 # RGB_PATH: /home/tita-remote/ZyyPlanner/word-vedio/004-1/rgb
 # DEPTH_PATH: /home/tita-remote/ZyyPlanner/word-vedio/004-1/depth
 
-python3 img_publisher.py \
+uv run python3 img_publisher.py \
     --ros-args -p fps:=10.0 \
     -p rgb_topic:="/virtual_camera/color/image_raw" \
     -p depth_topic:="/virtual_camera/depth/image_raw"
