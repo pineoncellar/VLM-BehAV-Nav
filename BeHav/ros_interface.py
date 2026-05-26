@@ -93,8 +93,10 @@ class LandmarkDetectorNode(Node):
             self.dual_logger.info(f"[EXP1_LOG] 大语言模型指令推理端到端耗时: {llm_end - llm_start:.4f} 秒, timestamp: {llm_end}")
         
         # ROS节点定义
-        self.image_topic = "/gemini330/color/image_raw"
-        self.depth_topic = "/gemini330/depth/image_raw"
+        self.declare_parameter('rgb_topic', '/gemini330/color/image_raw')
+        self.declare_parameter('depth_topic', '/gemini330/depth/image_raw')
+        self.image_topic = self.get_parameter('rgb_topic').value
+        self.depth_topic = self.get_parameter('depth_topic').value
         self.lidar_topic = "/tower/mapping/cloud_colored"
         self.odom_topic = "/tita4264886/chassis/odometry"
         self.cmd_topic = "/cmd_vel"

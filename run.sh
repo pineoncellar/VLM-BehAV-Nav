@@ -14,6 +14,10 @@ DISABLE_CONTROL=false       # 设为 true 时，底层 MPC 仅规划不发 /cmd_
 LOG_CMD_VEL_ONLY=true       # 设为 true 时，系统不会真的发布/cmd_vel，而是将时间戳与对应的指令记录到日志文件中
 LAUNCH_PLANNER=true         # 是否在当前脚本中一同拉起 Planner 部分
 
+# 相机话题配置
+CAMERA_RGB_TOPIC="/camera/color/image_raw"
+CAMERA_DEPTH_TOPIC="/camera/depth/image_raw"
+
 pids=()
 cleanup() {
   echo "Stopping all VLM-BehAV-Nav Nodes..."
@@ -140,7 +144,10 @@ echo "Step [2/2]: Starting BeHav ROS Interface (VLM Agent)..."
 echo "=========================================================="
 
 cd BeHav
-uv run python3 ros_interface.py &
+uv run python3 ros_interface.py \
+    --ros-args \
+    -p rgb_topic:="${CAMERA_RGB_TOPIC}" \
+    -p depth_topic:="${CAMERA_DEPTH_TOPIC}" &
 pids+=($!)
 
 echo "==============================================================="
