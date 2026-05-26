@@ -1,0 +1,153 @@
+#!/bin/bash
+set -e
+
+# =========================================================================
+# VLM-BehAV-Nav 统一整合启动脚本 (vlm_behav_nav_all_in_one.sh)
+#
+# 此脚本统一整合并启动：
+#   1. ROS 2 底层规划管线 (几何与语义建图、Far 路径寻路器、Local 局路探测野簇评分、底层 MPC 控制器)
+#   2. VLM-BehAV-Nav 视觉自然语言交互层 (VLM 自然语义控制、地标识别、极坐标解算桥接)
+# =========================================================================
+
+# ----------------- 1. 配置与多节点进程管理 -----------------
+DISABLE_CONTROL=false       # 设为 true 时，底层 MPC 仅规划不发 /cmd_vel 代码控制，用于安全调试小车
+LAUNCH_PLANNER=true         # 是否在当前脚本中一同拉起 Planner 部分
+
+pids=()
+cleanup() {
+  echo "Stopping all VLM-BehAV-Nav Nodes..."
+  trap - INT TERM EXIT
+  for pid in "${pids[@]}"; do
+    kill "$pid" 2>/dev/null || true
+  done
+  wait 2>/dev/null || true
+  echo "All nodes strictly terminated."
+}
+trap cleanup INT TERM EXIT
+
+# ----------------- 2. 加载工作空间及 Python 运行虚拟环境 -----------------
+# 切换至脚本当前所在目录确保工作区相对路径无冲突
+cd "$(dirname "$0")"
+
+# Source 机器人的仿真或实机运行工作空间 (robot_yang / tita_sdk)
+WORKSPACE_SETUP="./robot_yang/install/setup.bash"
+if [ -f "$WORKSPACE_SETUP" ]; then
+    source "$WORKSPACE_SETUP"
+    echo "Sourced robot_yang workspace"
+fi
+
+TITA_SETUP="~/tita_sdk/install/setup.bash"
+if [ -f "$TITA_SETUP" ]; then
+    source "$TITA_SETUP"
+    echo "Sourced tita_sdk workspace"
+fi
+
+source /opt/ros/humble/setup.bash 2>/dev/null || true
+
+# 激活 uv 管理的虚拟 Python 环境
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+    echo "Activated uv (.venv) virtual environment."
+fi
+
+# ----------------- 3. 视觉与大语言模型环境代理配置 -----------------
+export USE_FASTSAM="true"
+export CLUSTER_GAP="0.8"
+
+# 修复 httpx 不支持 socks:// 代理前缀的问题 (针对大模型 API 访问的常规适配)
+export http_proxy="${http_proxy/socks:\/\//socks5://}"
+export https_proxy="${https_proxy/socks:\/\//socks5://}"
+export all_proxy="${all_proxy/socks:\/\//socks5://}"
+export HTTP_PROXY="${HTTP_PROXY/socks:\/\//socks5://}"
+export HTTPS_PROXY="${HTTPS_PROXY/socks:\/\//socks5://}"
+export ALL_PROXY="${ALL_PROXY/socks:\/\//socks5://}"
+
+# ----------------- 4. 启动底层规划与控制层 (Planner) -----------------
+if [ "$LAUNCH_PLANNER" = "true" ]; then
+    echo "=========================================================="
+    echo "Step [1/2]: Starting Depth & Semantic Planner Network..."
+    echo "=========================================================="
+
+    # 4.1 几何与语义局部栅格建图
+    python3 ../map/depth_grid_standalone.py \
+      --depth-topic /camera_sensor/depth/image_raw \
+      --camera-info-topic /camera_sensor/depth/camera_info \
+      --rgb-topic /camera_sensor/image_raw \
+      --grid-topic /local_traversability_grid \
+      --target-frame base_footprint \
+      --enable-clipseg \
+      --clipseg-model-dir ~/nvidia/models/clipseg-rd64-refined &
+    pids+=($!)
+    sleep 4
+
+    # 4.2 改良版远端大航路寻优器（开启了 --behav-mode 动态目标监听模式）
+    python3 farplanner/far_waypoint_planner.py \
+      --current-waypoint-local-topic /far/current_waypoint_local \
+      --local-plan-topic /far/local_plan \
+      --reference-path-topic /far/reference_path_local \
+      --waypoint-queue-topic /far/waypoint_queue_local \
+      --current-subgoal-topic /far/current_subgoal_local \
+      --route-status-topic /far/route_status \
+      --far-goal-reached-topic /far/goal_reached \
+      --waypoint-queue-distances 0.8 1.5 2.5 3.3 4.0 \
+      --current-subgoal-distance 2.5 \
+      --behav-mode &
+    pids+=($!)
+    sleep 2
+
+    # 4.3 改良版车辆局部采样横摆规避与打分器 (具有车辆物理、语义占据格高弹性容差)
+    python3 localplanner/local_rollout_selector.py \
+      --current-waypoint-local-topic /far/current_waypoint_local \
+      --far-local-plan-topic /far/local_plan \
+      --reference-path-topic /far/reference_path_local \
+      --waypoint-queue-topic /far/waypoint_queue_local \
+      --current-subgoal-topic /far/current_subgoal_local \
+      --route-status-topic /far/route_status \
+      --far-goal-reached-topic /far/goal_reached \
+      --local-status-topic /local/status \
+      --route-tube-radius 0.65 \
+      --route-tube-max-deviation 1.10 \
+      --ref-mean-weight 4.0 \
+      --queue-weight 3.5 \
+      --progress-reward-weight 1.4 \
+      --switch-smooth-weight 1.2 \
+      --arbiter-switch-margin 1.0 \
+      --debug-switch \
+      --debug-rejections \
+      --grid-topic /local_traversability_grid \
+      --vehicle-size 0.5 \
+      --footprint-check-stride 2 \
+      --max-footprint-occupied-hits 30 \
+      --max-occupied-hits 50 \
+      --max-near-unknown-hits 300 \
+      --max-out-of-map-hits 50 \
+      --occupied-threshold 80 &
+    pids+=($!)
+    sleep 2
+
+    # 4.4 车辆物理模型阿克曼 MPC 循迹控制
+    MPC_ARGS="--far-goal-reached-topic /far/goal_reached --max-speed 0.5 --cmd-vel-topic /cmd_vel --no-sim-time"
+    if [ "$DISABLE_CONTROL" = "true" ]; then
+        MPC_ARGS="$MPC_ARGS --disable-control"
+        echo "⚠️ [DEBUG MODE] Control commands (/cmd_vel) are DISABLED. The robot will not move."
+    fi
+    python3 localplanner/ackermann_mpc_tracker.py $MPC_ARGS &
+    pids+=($!)
+    sleep 2
+fi
+
+# ----------------- 5. 启动高层交互与控制模块 (VLM BeHav) -----------------
+echo "=========================================================="
+echo "Step [2/2]: Starting BeHav ROS Interface (VLM Agent)..."
+echo "=========================================================="
+
+cd BeHav
+uv run python3 ros_interface.py &
+pids+=($!)
+
+echo "==============================================================="
+echo "   VLM-BehAV-Nav ALL-IN-ONE PIPELINE IS RUNNING SUCCESSFULLY.  "
+echo "   Press [Ctrl+C] to exit and stop all background services.   "
+echo "==============================================================="
+
+wait
