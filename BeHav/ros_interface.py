@@ -93,10 +93,10 @@ class LandmarkDetectorNode(Node):
             self.dual_logger.info(f"[EXP1_LOG] 大语言模型指令推理端到端耗时: {llm_end - llm_start:.4f} 秒, timestamp: {llm_end}")
         
         # ROS节点定义
-        self.image_topic = "/camera_sensor/image_raw"
-        self.depth_topic = "/camera_sensor/depth/image_raw"
-        self.lidar_topic = "/velodyne_points"
-        self.odom_topic = "/odom"
+        self.image_topic = "/gemini330/color/image_raw"
+        self.depth_topic = "/gemini330/depth/image_raw"
+        self.lidar_topic = "/tower/mapping/cloud_colored"
+        self.odom_topic = "/tita4264886/chassis/odometry"
         self.cmd_topic = "/cmd_vel"
         self.period_sec = 10.0
         self.control_period_sec = 0.1 # 10 Hz for control loop

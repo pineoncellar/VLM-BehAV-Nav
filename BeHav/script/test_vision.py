@@ -31,9 +31,9 @@ class TestVisionNode(Node):
 
         self.bridge = CvBridge()
         self.image_sub = self.create_subscription(
-            Image, '/camera_sensor/image_raw', self.image_callback, 1)
+            Image, '/gemini330/color/image_raw', self.image_callback, 1)
         
-        self.get_logger().info("Subscribed to /camera_sensor/image_raw. Waiting for simulation images...")
+        self.get_logger().info("Subscribed to /gemini330/color/image_raw. Waiting for simulation images...")
         self.is_processing = False
 
     def image_callback(self, msg: Image):
