@@ -13,10 +13,12 @@ set -e
 DISABLE_CONTROL=false       # 设为 true 时，底层 MPC 仅规划不发 /cmd_vel 代码控制，用于安全调试小车
 LOG_CMD_VEL_ONLY=true       # 设为 true 时，系统不会真的发布/cmd_vel，而是将时间戳与对应的指令记录到日志文件中
 LAUNCH_PLANNER=true         # 是否在当前脚本中一同拉起 Planner 部分
+USE_FASTSAM=false            # 是否使用 FastSAM 独立显卡模型进行目标分割
+CLUSTER_GAP=0.8             # 深度连续性突变判定阈值 (米)
 
 # 相机话题配置
-CAMERA_RGB_TOPIC="/virtual_camera/color/image_raw"
-CAMERA_DEPTH_TOPIC="/virtual_camera/depth/image_raw"
+CAMERA_RGB_TOPIC="/gemini330/color/image_raw"
+CAMERA_DEPTH_TOPIC="/gemini330/depth/image_raw"
 
 pids=()
 cleanup() {
@@ -34,8 +36,10 @@ trap cleanup INT TERM EXIT
 # 切换至脚本当前所在目录确保工作区相对路径无冲突
 cd "$(dirname "$0")"
 
-# 确保 output 目录存在
-mkdir -p output
+START_TIME=$(date +%Y%m%d_%H%M%S)
+
+# 确保 logs 目录存在
+mkdir -p logs/far_waypoint_planner logs/local_rollout_selector logs/ackermann_mpc_tracker logs/cmd_vel logs/BeHav
 
 # Source 机器人的仿真或实机运行工作空间 (robot_yang / tita_sdk)
 WORKSPACE_SETUP="./robot_yang/install/setup.bash"
@@ -59,8 +63,8 @@ if [ -d ".venv" ]; then
 fi
 
 # ----------------- 3. 视觉与大语言模型环境代理配置 -----------------
-export USE_FASTSAM="true"
-export CLUSTER_GAP="0.8"
+export USE_FASTSAM="$USE_FASTSAM"
+export CLUSTER_GAP="$CLUSTER_GAP"
 
 # 修复 httpx 不支持 socks:// 代理前缀的问题 (针对大模型 API 访问的常规适配)
 export http_proxy="${http_proxy/socks:\/\//socks5://}"
@@ -76,7 +80,7 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
     echo "Step [1/2]: Starting Depth & Semantic Planner Network..."
     echo "=========================================================="
 
-    # 4.2 改良版远端大航路寻优器（开启了 --behav-mode 动态目标监听模式）
+    # 为了避免后台节点日志刷屏干扰前台输入，将输出重定向到 logs/ 对应子文件夹日志文件
     uv run python3 farplanner/far_waypoint_planner.py \
       --current-waypoint-local-topic /far/current_waypoint_local \
       --local-plan-topic /far/local_plan \
@@ -87,7 +91,7 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
       --far-goal-reached-topic /far/goal_reached \
       --waypoint-queue-distances 0.8 1.5 2.5 3.3 4.0 \
       --current-subgoal-distance 2.5 \
-      --behav-mode &
+      --behav-mode > "logs/far_waypoint_planner/${START_TIME}.log" 2>&1 &
     pids+=($!)
     sleep 2
 
@@ -117,7 +121,7 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
       --max-occupied-hits 50 \
       --max-near-unknown-hits 300 \
       --max-out-of-map-hits 50 \
-      --occupied-threshold 80 &
+      --occupied-threshold 80 > "logs/local_rollout_selector/${START_TIME}.log" 2>&1 &
     pids+=($!)
     sleep 2
 
@@ -128,12 +132,11 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
         echo "⚠️ [DEBUG MODE] Control commands (/cmd_vel) are DISABLED. The robot will not move."
     fi
     if [ "$LOG_CMD_VEL_ONLY" = "true" ]; then
-        START_TIME=$(date +%Y%m%d_%H%M%S)
-        LOG_FILE_PATH="$PWD/output/cmd_vel_${START_TIME}.log"
+        LOG_FILE_PATH="$PWD/logs/cmd_vel/${START_TIME}.log"
         MPC_ARGS="$MPC_ARGS --log-cmd-vel-file $LOG_FILE_PATH"
-        echo "⚠️ [LOG MODE] Control commands (/cmd_vel) intercept to log: output/cmd_vel_${START_TIME}.log"
+        echo "⚠️ [LOG MODE] Control commands (/cmd_vel) intercept to log: logs/cmd_vel/${START_TIME}.log"
     fi
-    uv run python3 localplanner/ackermann_mpc_tracker.py $MPC_ARGS &
+    uv run python3 localplanner/ackermann_mpc_tracker.py $MPC_ARGS > "logs/ackermann_mpc_tracker/${START_TIME}.log" 2>&1 &
     pids+=($!)
     sleep 2
 fi
@@ -143,16 +146,13 @@ echo "=========================================================="
 echo "Step [2/2]: Starting BeHav ROS Interface (VLM Agent)..."
 echo "=========================================================="
 
-cd BeHav
-uv run python3 ros_interface.py \
-    --ros-args \
-    -p rgb_topic:="${CAMERA_RGB_TOPIC}" \
-    -p depth_topic:="${CAMERA_DEPTH_TOPIC}" &
-pids+=($!)
-
 echo "==============================================================="
 echo "   VLM-BehAV-Nav ALL-IN-ONE PIPELINE IS RUNNING SUCCESSFULLY.  "
 echo "   Press [Ctrl+C] to exit and stop all background services.   "
 echo "==============================================================="
 
-wait
+cd BeHav
+uv run python3 ros_interface.py \
+    --ros-args \
+    -p rgb_topic:="${CAMERA_RGB_TOPIC}" \
+    -p depth_topic:="${CAMERA_DEPTH_TOPIC}"

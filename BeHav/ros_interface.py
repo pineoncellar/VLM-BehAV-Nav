@@ -15,10 +15,11 @@ from cv_bridge import CvBridge, CvBridgeError
 from main import BehavMainPipeline
 
 def setup_file_logger():
-    log_dir = "log"
+    # 改为存入根目录下的 logs/BeHav 文件夹中
+    log_dir = "../logs/BeHav"
     os.makedirs(log_dir, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_file = os.path.join(log_dir, f"run_{timestamp}.log")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(log_dir, f"{timestamp}.log")
     
     file_logger = logging.getLogger("behav_file_logger")
     file_logger.setLevel(logging.INFO)

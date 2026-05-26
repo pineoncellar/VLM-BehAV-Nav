@@ -18,8 +18,5 @@ BeHav/FastSAM-x.pt
 BeHav/scripts/*
 !BeHav/scripts/*.py
 
-backup/*
-
-# 排除tracker中的输出文件与多余的输入文件
-tracker/output/*
-tracker/input/*
+# 排除日志
+logs/*
