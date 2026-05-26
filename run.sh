@@ -68,18 +68,6 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
     echo "Step [1/2]: Starting Depth & Semantic Planner Network..."
     echo "=========================================================="
 
-    # 4.1 几何与语义局部栅格建图
-    python3 ../map/depth_grid_standalone.py \
-      --depth-topic /camera_sensor/depth/image_raw \
-      --camera-info-topic /camera_sensor/depth/camera_info \
-      --rgb-topic /camera_sensor/image_raw \
-      --grid-topic /local_traversability_grid \
-      --target-frame base_footprint \
-      --enable-clipseg \
-      --clipseg-model-dir ~/nvidia/models/clipseg-rd64-refined &
-    pids+=($!)
-    sleep 4
-
     # 4.2 改良版远端大航路寻优器（开启了 --behav-mode 动态目标监听模式）
     python3 farplanner/far_waypoint_planner.py \
       --current-waypoint-local-topic /far/current_waypoint_local \
