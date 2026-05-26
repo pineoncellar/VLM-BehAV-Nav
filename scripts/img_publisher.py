@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 import cv2
 import os
@@ -17,6 +17,7 @@ class ImagePublisher(Node):
         self.declare_parameter('fps', 10.0)
         self.declare_parameter('rgb_topic', '/camera/color/image_raw')
         self.declare_parameter('depth_topic', '/camera/depth/image_raw')
+        self.declare_parameter('camera_info_topic', '/camera/depth/camera_info')
         
         # Get parameters
         self.rgb_path = self.get_parameter('rgb_path').value
@@ -24,10 +25,13 @@ class ImagePublisher(Node):
         self.fps = self.get_parameter('fps').value
         self.rgb_topic = self.get_parameter('rgb_topic').value
         self.depth_topic = self.get_parameter('depth_topic').value
+        self.camera_info_topic = self.get_parameter('camera_info_topic').value
         
         # Publishers
         self.rgb_pub = self.create_publisher(Image, self.rgb_topic, 10)
         self.depth_pub = self.create_publisher(Image, self.depth_topic, 10)
+        self.camera_info_pub = self.create_publisher(CameraInfo, self.camera_info_topic, 10)
+        self.camera_info_msg = self._build_camera_info()
         
         self.cv_bridge = CvBridge()
         
@@ -47,6 +51,24 @@ class ImagePublisher(Node):
         self.timer = self.create_timer(period, self.timer_callback)
         self.get_logger().info(f"Image publisher started reading from:\nRGB: {self.rgb_path}\nDepth: {self.depth_path}\nat {self.fps} FPS")
 
+    def _build_camera_info(self):
+        msg = CameraInfo()
+        msg.height = 480
+        msg.width = 640
+        msg.distortion_model = "plumb_bob"
+        msg.d = [-0.03134607896208763, 0.034163735806941986, -0.0002452715125400573, 7.945882316562347e-06, -0.011619596742093563, 0.0, 0.0, 0.0]
+        msg.k = [367.2445373535156, 0.0, 319.23297119140625, 0.0, 367.30047607421875, 236.9733428955078, 0.0, 0.0, 1.0]
+        msg.r = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        msg.p = [367.2445373535156, 0.0, 319.23297119140625, 0.0, 0.0, 367.30047607421875, 236.9733428955078, 0.0, 0.0, 0.0, 1.0, 0.0]
+        msg.binning_x = 0
+        msg.binning_y = 0
+        msg.roi.x_offset = 0
+        msg.roi.y_offset = 0
+        msg.roi.height = 0
+        msg.roi.width = 0
+        msg.roi.do_rectify = False
+        return msg
+
     def timer_callback(self):
         if not self.rgb_files and not self.depth_files:
             return
@@ -57,6 +79,11 @@ class ImagePublisher(Node):
             self.frame_idx = 0
 
         now = self.get_clock().now().to_msg()
+        
+        # Publish Camera Info
+        self.camera_info_msg.header.stamp = now
+        self.camera_info_msg.header.frame_id = "camera_depth_optical_frame"
+        self.camera_info_pub.publish(self.camera_info_msg)
 
         # Read and publish RGB
         if self.frame_idx < len(self.rgb_files):

@@ -12,7 +12,7 @@ echo "Starting Image Publisher Node..."
 # DEPTH_PATH: /home/tita-remote/ZyyPlanner/word-vedio/004-1/depth
 
 uv run python3 img_publisher.py \
-    --ros-args -p fps:=10.0 \
+    --ros-args -p fps:=30.0 \
     -p rgb_topic:="/virtual_camera/color/image_raw" \
-    -p depth_topic:="/virtual_camera/depth/image_raw"
-
+    -p depth_topic:="/virtual_camera/depth/image_raw" \
+    -p camera_info_topic:="/virtual_camera/depth/camera_info"
