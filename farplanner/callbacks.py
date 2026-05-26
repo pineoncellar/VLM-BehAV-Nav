@@ -37,8 +37,30 @@ class FarCallbacksMixin:
         self.robot_yaw = self.quat_to_yaw(q.x, q.y, q.z, q.w)
         self.odom_frame = msg.header.frame_id if msg.header.frame_id else self.args.odom_frame_fallback
 
-        if self.far_goal_odom is None:
+        if self.far_goal_odom is None and not bool(getattr(self.args, "behav_mode", False)):
             self.fix_far_goal_from_polar()
+
+    def polar_goal_callback(self, msg) -> None:
+        if bool(getattr(self.args, "behav_mode", False)):
+            if msg.z == 1.0: # absolute
+                self.far_goal_odom = Point2(msg.x, msg.y)
+                self.goal_reached = False
+                self.get_logger().info(f"Updated absolute goal from BeHav: x={msg.x:.2f}, y={msg.y:.2f}")
+                return
+                
+            if self.robot_x is None or self.robot_y is None or self.robot_yaw is None:
+                self.get_logger().warn("Cannot compute polar goal: robot pose is None")
+                return
+            
+            distance = msg.x
+            angle_deg = msg.y
+            angle = math.radians(angle_deg)
+            heading = self.robot_yaw + angle
+            gx = self.robot_x + distance * math.cos(heading)
+            gy = self.robot_y + distance * math.sin(heading)
+            self.far_goal_odom = Point2(gx, gy)
+            self.goal_reached = False
+            self.get_logger().info(f"Updated polar goal from BeHav: dist={distance:.2f}m, angle={angle_deg:.1f}deg -> x={gx:.2f}, y={gy:.2f}")
 
     def local_planner_ok_callback(self, msg: Bool) -> None:
         if bool(msg.data):

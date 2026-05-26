@@ -13,7 +13,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 
-from geometry_msgs.msg import PoseStamped, PoseArray
+from geometry_msgs.msg import PoseStamped, PoseArray, Point
 from nav_msgs.msg import OccupancyGrid, Odometry, Path
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import Bool, String
@@ -98,6 +98,12 @@ class FarWaypointPlanner(
             Bool,
             args.local_planner_ok_topic,
             self.local_planner_ok_callback,
+            10,
+        )
+        self.polar_goal_sub = self.create_subscription(
+            Point,
+            "/behav/goal_polar",
+            self.polar_goal_callback,
             10,
         )
 
@@ -266,6 +272,7 @@ def parse_args():
 
     parser.add_argument("--update-hz", type=float, default=5.0)
     parser.add_argument("--print-every", type=int, default=20)
+    parser.add_argument("--behav-mode", action="store_true", default=False, help="Whether to enable BeHav mode")
 
     args, ros_args = parser.parse_known_args()
     return args, ros_args
