@@ -79,7 +79,7 @@ class LandmarkDetectorCore:
         self.use_vlm_distance = True
 
         # 距离小于这个值时，切换到下一个 landmark
-        self.goal_reached_threshold_m = 3.0
+        self.goal_reached_threshold_m = 1.5
 
         # 调试图
         self.save_debug_plot = True
