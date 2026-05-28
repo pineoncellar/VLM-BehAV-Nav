@@ -42,7 +42,7 @@ class LandmarkDetectorCore:
             if self.logger:
                 self.logger.info('Initializing FastSAM model...')
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            self.fastsam_model = FastSAM("FastSAM-x.pt")
+            self.fastsam_model = FastSAM("FastSAM-s.pt")
         else:
             if self.logger:
                 self.logger.info('FastSAM disabled, using lightweight depth histogram method.')

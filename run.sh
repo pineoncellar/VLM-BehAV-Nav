@@ -10,8 +10,8 @@ set -e
 # =========================================================================
 
 # ----------------- 1. 配置与多节点进程管理 -----------------
-DISABLE_CONTROL=false       # 设为 true 时，底层 MPC 仅规划不发 /cmd_vel 代码控制，用于安全调试小车
-LOG_CMD_VEL_ONLY=true       # 设为 true 时，系统不会真的发布/cmd_vel，而是将时间戳与对应的指令记录到日志文件中
+DISABLE_CONTROL=true       # 设为 true 时，底层 MPC 仅规划不发 /cmd_vel 代码控制，用于安全调试小车
+LOG_CMD_VEL_ONLY=false       # 设为 true 时，系统不会真的发布/cmd_vel，而是将时间戳与对应的指令记录到日志文件中
 LAUNCH_PLANNER=true         # 是否在当前脚本中一同拉起 Planner 部分
 USE_FASTSAM=false            # 是否使用 FastSAM 独立显卡模型进行目标分割
 CLUSTER_GAP=0.8             # 深度连续性突变判定阈值 (米)

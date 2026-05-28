@@ -11,7 +11,7 @@ def main():
     cv2.imwrite("test_img.jpg", img)
     
     print("2. Loading FastSAM model...")
-    model = FastSAM("FastSAM-x.pt")
+    model = FastSAM("FastSAM-s.pt")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     print(f"3. Running inference on {device}...")

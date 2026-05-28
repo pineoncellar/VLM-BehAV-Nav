@@ -63,7 +63,7 @@ def main():
     # 使用与 BeHav 相同的依赖
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from ultralytics import FastSAM
-    model_path = os.path.join(os.path.dirname(script_dir), "FastSAM-x.pt")
+    model_path = os.path.join(os.path.dirname(script_dir), "FastSAM-s.pt")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     fastsam_model = FastSAM(model_path)
     
