@@ -1,0 +1,249 @@
+#!/bin/bash
+
+set -e
+
+cd "$(dirname "$0")"
+
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export TOKENIZERS_PARALLELISM=false
+export TRANSFORMERS_VERBOSITY=error
+export PYTHONUNBUFFERED=1
+export MALLOC_ARENA_MAX=2
+
+GEOM_CPUS="${GEOM_CPUS:-0-3}"
+CLIP_CPUS="${CLIP_CPUS:-4-7}"
+PUBLISH_DEBUG_IMAGE="${PUBLISH_DEBUG_IMAGE:-0}"
+
+# Fixed semantic costs for each CLIPSeg prompt.
+# Values can be [0,1]. They are converted to [0,100] internally.
+COST_GRASS="${COST_GRASS:-0.56}"
+COST_PAVEMENT="${COST_PAVEMENT:-0.05}"
+COST_VEGETATION="${COST_VEGETATION:-0.78}"
+COST_STOP_GESTURE="${COST_STOP_GESTURE:-1.00}"
+
+RGB_TOPIC="${RGB_TOPIC:-/gemini330/color/image_raw}"
+DEPTH_TOPIC="${DEPTH_TOPIC:-/gemini330/depth/image_raw}"
+DEPTH_INFO_TOPIC="${DEPTH_INFO_TOPIC:-/gemini330/depth/camera_info}"
+
+TARGET_FRAME="${TARGET_FRAME:-tita4264886/base_link}"
+
+# Important:
+# Gemini already publishes:
+#   camera_link -> camera_depth_frame -> camera_color_frame -> camera_color_optical_frame
+#
+# Therefore this script should only publish:
+#   tita4264886/base_link -> camera_link
+#
+# Do NOT publish directly to camera_color_optical_frame.
+CAMERA_FRAME="${CAMERA_FRAME:-camera_link}"
+
+CAMERA_X="${CAMERA_X:-0.25}"
+CAMERA_Y="${CAMERA_Y:-0.00}"
+CAMERA_Z="${CAMERA_Z:-0.25}"
+
+# This is base_link -> camera_link.
+# Start with identity rotation because Gemini handles optical-frame rotation internally.
+CAMERA_QX="${CAMERA_QX:-0.0}"
+CAMERA_QY="${CAMERA_QY:-0.0}"
+CAMERA_QZ="${CAMERA_QZ:-0.0}"
+CAMERA_QW="${CAMERA_QW:-1.0}"
+
+TF_PID=""
+GEOM_PID=""
+CLIP_PID=""
+
+run_on_cpu() {
+  CPUS="$1"
+  shift
+  if command -v taskset >/dev/null 2>&1; then
+    taskset -c "$CPUS" "$@"
+  else
+    "$@"
+  fi
+}
+
+cleanup() {
+  echo
+  echo "Stopping..."
+  kill "${TF_PID:-}" "${GEOM_PID:-}" "${CLIP_PID:-}" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
+
+# Clean our old mapping-related processes.
+# These two static TF kill lines remove both the new correct TF and the old incorrect direct-to-optical TF.
+pkill -f "static_transform_publisher.*camera_link" 2>/dev/null || true
+pkill -f "static_transform_publisher.*camera_color_optical_frame" 2>/dev/null || true
+pkill -f "depth_grid_geometry_node.py" 2>/dev/null || true
+pkill -f "depth_grid_semantic_node.py" 2>/dev/null || true
+pkill -f "clipseg_debug_node.py" 2>/dev/null || true
+
+start_tf() {
+  ros2 run tf2_ros static_transform_publisher \
+    --x "$CAMERA_X" \
+    --y "$CAMERA_Y" \
+    --z "$CAMERA_Z" \
+    --qx "$CAMERA_QX" \
+    --qy "$CAMERA_QY" \
+    --qz "$CAMERA_QZ" \
+    --qw "$CAMERA_QW" \
+    --frame-id "$TARGET_FRAME" \
+    --child-frame-id "$CAMERA_FRAME" &
+
+  TF_PID=$!
+  echo "TF started: PID=$TF_PID, parent=$TARGET_FRAME, child=$CAMERA_FRAME, xyz=($CAMERA_X,$CAMERA_Y,$CAMERA_Z), q=($CAMERA_QX,$CAMERA_QY,$CAMERA_QZ,$CAMERA_QW)"
+}
+
+start_grid() {
+  run_on_cpu "$GEOM_CPUS" python3 -u depth_grid_semantic_node.py \
+    --no-sim-time \
+    --depth-topic "$DEPTH_TOPIC" \
+    --camera-info-topic "$DEPTH_INFO_TOPIC" \
+    --target-frame "$TARGET_FRAME" \
+    --grid-topic /local_traversability_grid \
+    --x-min 0.0 \
+    --x-max 5.0 \
+    --y-min -2.5 \
+    --y-max 2.5 \
+    --resolution 0.2 \
+    --min-depth 0.2 \
+    --max-depth 6.0 \
+    --ground-z 0.0 \
+    --obstacle-height 0.25 \
+    --max-obstacle-height 1.5 \
+    --downsample 2 \
+    --auto-downsample \
+    --min-downsample 2 \
+    --max-downsample 5 \
+    --grid-target-load 0.65 \
+    --min-points-per-cell 3 \
+    --min-obstacle-points-per-cell 3 \
+    --min-valid-points 1000 \
+    --min-in-area-points 200 \
+    --enable-semantic-fusion \
+    --semantic-cost-topic /clipseg_cost_map \
+    --semantic-max-age 10.0 \
+    --adaptive-semantic-age \
+    --semantic-age-period-mult 3.0 \
+    --semantic-max-age-cap 30.0 \
+    --semantic-stamp-check \
+    --semantic-stamp-max-delta 4.0 \
+    --semantic-stamp-period-mult 2.5 \
+    --semantic-stamp-delta-cap 30.0 \
+    --semantic-downsample 2 \
+    --semantic-min-pixel-cost 1.0 \
+    --semantic-cost-threshold 35.0 \
+    --semantic-block-value 80 \
+    --min-semantic-points-per-cell 2 \
+    --semantic-ground-min -0.20 \
+    --semantic-ground-max 0.35 \
+    --image-qos-depth 1 \
+    --semantic-qos-depth 1 \
+    --pub-qos-depth 1 \
+    --depth-exit-stale-sec 6.0 \
+    --adaptive-stale \
+    --stale-period-mult 4.0 \
+    --max-stale-sec 30.0 \
+    --rate-ewma-alpha 0.15 \
+    --max-observed-period 30.0 \
+    --executor-threads 3 \
+    --heartbeat-sec 2.0 \
+    --print-every 30 &
+
+  GEOM_PID=$!
+  echo "Grid started: PID=$GEOM_PID, CPUs=$GEOM_CPUS, depth_topic=$DEPTH_TOPIC, camera_info=$DEPTH_INFO_TOPIC"
+}
+
+start_clipseg() {
+  DEBUG_FLAG="--publish-debug-image"
+
+
+  run_on_cpu "$CLIP_CPUS" nice -n 10 python3 -u clipseg_debug_node.py \
+    --no-sim-time \
+    --rgb-topic "$RGB_TOPIC" \
+    --model-dir /home/robot/ZyyPlanner/model/clipseg \
+    --output-topic /clipseg_inference_image \
+    --cost-map-topic /clipseg_cost_map \
+    --hz 0.5 \
+    --adaptive-rate \
+    --adaptive-min-hz 0.20 \
+    --adaptive-max-hz 1.00 \
+    --adaptive-target-load 0.50 \
+    --scheduler-tick-hz 10.0 \
+    --input-width 160 \
+    --debug-mode cost \
+    --confidence-threshold 0.25 \
+    --prompts floor wall box person \
+    --prompt-costs "floor=0.05" "wall=0.95" "box=0.85" "person=1.00" \
+    --behavior-rule avoid_grass \
+    --rgb-qos-depth 1 \
+    --pub-qos-depth 1 \
+    --rgb-exit-stale-sec 8.0 \
+    --adaptive-stale \
+    --stale-period-mult 4.0 \
+    --max-stale-sec 30.0 \
+    --rate-ewma-alpha 0.15 \
+    --max-observed-period 30.0 \
+    --executor-threads 3 \
+    --heartbeat-sec 2.0 \
+    --print-every 5 \
+    $DEBUG_FLAG &
+
+  CLIP_PID=$!
+  echo "CLIPSeg started: PID=$CLIP_PID, CPUs=$CLIP_CPUS, rgb_topic=$RGB_TOPIC, debug_image=$PUBLISH_DEBUG_IMAGE"
+}
+
+start_tf
+sleep 1
+start_grid
+sleep 2
+start_clipseg
+
+echo
+echo "System mode started."
+echo
+echo "Topics:"
+echo "  /local_traversability_grid"
+echo "  /clipseg_cost_map"
+if [ "$PUBLISH_DEBUG_IMAGE" = "1" ]; then
+  echo "  /clipseg_inference_image"
+fi
+echo
+echo "Input topics:"
+echo "  RGB   : $RGB_TOPIC"
+echo "  Depth : $DEPTH_TOPIC"
+echo "  Info  : $DEPTH_INFO_TOPIC"
+echo
+echo "TF:"
+echo "  Parent frame: $TARGET_FRAME"
+echo "  Child frame : $CAMERA_FRAME"
+echo "  Expected full chain:"
+echo "    $TARGET_FRAME -> camera_link -> camera_depth_frame -> camera_color_frame -> camera_color_optical_frame"
+echo
+echo "Debug image is disabled by default. To enable it:"
+echo "  PUBLISH_DEBUG_IMAGE=1 ./run_tita_mapping_system.sh"
+echo
+
+while true; do
+  if ! kill -0 "$TF_PID" 2>/dev/null; then
+    echo "WARN: TF process exited. Restarting..."
+    wait "$TF_PID" 2>/dev/null || true
+    start_tf
+  fi
+
+  if ! kill -0 "$GEOM_PID" 2>/dev/null; then
+    echo "WARN: grid process exited. Restarting..."
+    wait "$GEOM_PID" 2>/dev/null || true
+    start_grid
+  fi
+
+  if ! kill -0 "$CLIP_PID" 2>/dev/null; then
+    echo "WARN: clipseg process exited. Restarting..."
+    wait "$CLIP_PID" 2>/dev/null || true
+    start_clipseg
+  fi
+
+  sleep 1
+done

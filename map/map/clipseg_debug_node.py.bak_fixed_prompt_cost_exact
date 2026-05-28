@@ -1,0 +1,535 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import argparse
+import math
+import os
+import threading
+import time
+from dataclasses import dataclass
+from typing import Optional, Tuple
+
+import numpy as np
+
+import rclpy
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
+from rclpy.parameter import Parameter
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+from builtin_interfaces.msg import Time as TimeMsg
+from sensor_msgs.msg import Image
+from std_msgs.msg import Header
+
+from clipseg_core import ClipsegCore
+
+
+@dataclass(frozen=True)
+class RgbFramePacket:
+    rgb: np.ndarray
+    stamp: object
+    frame_id: str
+    stamp_key: Tuple[int, int]
+    seq: int
+    recv_wall_time: float
+
+
+class EwmaRate:
+    def __init__(self, alpha: float = 0.15, min_period: float = 0.001, max_period: float = 30.0):
+        self.alpha = float(np.clip(alpha, 0.001, 1.0))
+        self.min_period = float(max(1e-6, min_period))
+        self.max_period = float(max(self.min_period, max_period))
+        self.last_wall_time = 0.0
+        self.period = None
+
+    def update(self, now: float) -> None:
+        now = float(now)
+        if self.last_wall_time > 0.0:
+            dt = float(np.clip(now - self.last_wall_time, self.min_period, self.max_period))
+            if self.period is None:
+                self.period = dt
+            else:
+                self.period = (1.0 - self.alpha) * self.period + self.alpha * dt
+        self.last_wall_time = now
+
+    def hz(self) -> float:
+        if self.period is None or self.period <= 0.0:
+            return 0.0
+        return 1.0 / self.period
+
+
+class EwmaScalar:
+    def __init__(self, alpha: float = 0.15):
+        self.alpha = float(np.clip(alpha, 0.001, 1.0))
+        self.value = None
+
+    def update(self, x: float) -> None:
+        x = float(max(0.0, x))
+        if self.value is None:
+            self.value = x
+        else:
+            self.value = (1.0 - self.alpha) * self.value + self.alpha * x
+
+    def get(self, default: float = 0.0) -> float:
+        if self.value is None:
+            return float(default)
+        return float(self.value)
+
+
+def make_sensor_qos(depth: int) -> QoSProfile:
+    return QoSProfile(
+        history=HistoryPolicy.KEEP_LAST,
+        depth=max(1, int(depth)),
+        reliability=ReliabilityPolicy.BEST_EFFORT,
+        durability=DurabilityPolicy.VOLATILE,
+    )
+
+
+def make_pub_qos(depth: int) -> QoSProfile:
+    return QoSProfile(
+        history=HistoryPolicy.KEEP_LAST,
+        depth=max(1, int(depth)),
+        reliability=ReliabilityPolicy.RELIABLE,
+        durability=DurabilityPolicy.VOLATILE,
+    )
+
+
+class ClipsegDebugNode(Node):
+    def __init__(self, args):
+        parameter_overrides = []
+        if args.use_sim_time:
+            parameter_overrides.append(Parameter("use_sim_time", Parameter.Type.BOOL, True))
+
+        super().__init__("clipseg_debug_node", parameter_overrides=parameter_overrides)
+
+        self.args = args
+
+        self.core = ClipsegCore(
+            model_dir=args.model_dir,
+            prompts=args.prompts,
+            behavior_rule=args.behavior_rule,
+            input_width=args.input_width,
+            confidence_threshold=args.confidence_threshold,
+            use_amp=args.use_amp,
+            debug_mode=args.debug_mode,
+            make_debug_overlay=args.publish_debug_image,
+        )
+
+        self.state_lock = threading.Lock()
+        self.infer_lock = threading.Lock()
+        self.latest_frame: Optional[RgbFramePacket] = None
+        self.last_processed_stamp_key: Optional[Tuple[int, int]] = None
+
+        self.rgb_rate = EwmaRate(args.rate_ewma_alpha, max_period=args.max_observed_period)
+        self.infer_total_ewma = EwmaScalar(args.rate_ewma_alpha)
+        self.next_infer_wall_time = 0.0
+        self.current_adaptive_period = 1.0 / max(0.001, args.hz)
+        self.current_stale_timeout = args.rgb_exit_stale_sec
+
+        self.rgb_count = 0
+        self.pub_count = 0
+        self.fail_count = 0
+        self.decode_fail_count = 0
+        self.busy_skip_count = 0
+        self.repeat_skip_count = 0
+        self.throttle_skip_count = 0
+        self.last_rgb_wall_time = 0.0
+        self.last_pub_wall_time = 0.0
+        self.last_callback_decode_time = 0.0
+        self.last_skip_reason = ""
+
+        self.rgb_group = ReentrantCallbackGroup()
+        self.infer_group = MutuallyExclusiveCallbackGroup()
+        self.heartbeat_group = ReentrantCallbackGroup()
+
+        self.rgb_sub = self.create_subscription(
+            Image,
+            args.rgb_topic,
+            self.rgb_callback,
+            make_sensor_qos(args.rgb_qos_depth),
+            callback_group=self.rgb_group,
+        )
+
+        pub_qos = make_pub_qos(args.pub_qos_depth)
+        self.debug_pub = None
+        if self.args.publish_debug_image:
+            self.debug_pub = self.create_publisher(Image, args.output_topic, pub_qos)
+        self.cost_pub = self.create_publisher(Image, args.cost_map_topic, pub_qos)
+
+        self.raw_pub = None
+        if self.args.publish_raw_prob_image:
+            self.raw_pub = self.create_publisher(Image, args.raw_prob_topic, pub_qos)
+
+        if args.adaptive_rate:
+            timer_period = 1.0 / max(1.0, float(args.scheduler_tick_hz))
+        else:
+            timer_period = 1.0 / max(0.001, float(args.hz))
+
+        self.timer = self.create_timer(
+            timer_period,
+            self.timer_callback,
+            callback_group=self.infer_group,
+        )
+        self.heartbeat_timer = self.create_timer(
+            args.heartbeat_sec,
+            self.heartbeat_callback,
+            callback_group=self.heartbeat_group,
+        )
+
+        self.get_logger().info("clipseg_debug_node.py adaptive safe-buffer version started")
+        self.get_logger().info(f"rgb_topic        : {args.rgb_topic}")
+        self.get_logger().info(f"output_topic     : {args.output_topic}")
+        self.get_logger().info(f"cost_map_topic   : {args.cost_map_topic}")
+        self.get_logger().info(f"raw_prob_topic   : {args.raw_prob_topic}")
+        self.get_logger().info(f"publish_debug    : {args.publish_debug_image}")
+        self.get_logger().info(f"publish_raw_prob : {args.publish_raw_prob_image}")
+        self.get_logger().info(f"model_dir        : {args.model_dir}")
+        self.get_logger().info(f"prompts          : {args.prompts}")
+        self.get_logger().info(f"hz               : {args.hz}")
+        self.get_logger().info(f"adaptive_rate    : {args.adaptive_rate}")
+        self.get_logger().info(f"adaptive_hz      : [{args.adaptive_min_hz:.3f}, {args.adaptive_max_hz:.3f}]")
+        self.get_logger().info(f"target_load      : {args.adaptive_target_load:.2f}")
+        self.get_logger().info(f"input_width      : {args.input_width}")
+        self.get_logger().info(f"debug_mode       : {args.debug_mode}")
+        self.get_logger().info(f"rgb_qos_depth    : {args.rgb_qos_depth}")
+        self.get_logger().info(f"pub_qos_depth    : {args.pub_qos_depth}")
+        self.get_logger().info(f"rgb stale exit   : {args.rgb_exit_stale_sec:.2f}s adaptive={args.adaptive_stale}")
+
+    def rgb_callback(self, msg: Image) -> None:
+        start = time.time()
+        try:
+            rgb = ClipsegCore.decode_rgb_image_msg(msg, copy=True)
+        except Exception as e:
+            with self.state_lock:
+                self.decode_fail_count += 1
+            self.get_logger().warn(f"RGB decode failed: {e}")
+            return
+
+        now = time.time()
+        sec = int(msg.header.stamp.sec)
+        nanosec = int(msg.header.stamp.nanosec)
+        stamp_key = (sec, nanosec)
+        stamp_copy = TimeMsg(sec=sec, nanosec=nanosec)
+        frame_id_copy = str(msg.header.frame_id)
+
+        with self.state_lock:
+            self.rgb_rate.update(now)
+            self.rgb_count += 1
+            packet = RgbFramePacket(
+                rgb=rgb,
+                stamp=stamp_copy,
+                frame_id=frame_id_copy,
+                stamp_key=stamp_key,
+                seq=self.rgb_count,
+                recv_wall_time=now,
+            )
+            self.latest_frame = packet
+            self.last_rgb_wall_time = now
+            self.last_callback_decode_time = now - start
+
+    def compute_adaptive_period_locked(self) -> float:
+        args = self.args
+        if not args.adaptive_rate:
+            return 1.0 / max(0.001, float(args.hz))
+
+        max_hz = max(0.001, float(args.adaptive_max_hz))
+        min_hz = max(0.0, float(args.adaptive_min_hz))
+        min_period = 1.0 / max_hz
+        max_period = 1.0 / min_hz if min_hz > 0.0 else float(args.adaptive_max_period)
+        max_period = max(min_period, max_period)
+
+        infer_total = self.infer_total_ewma.get(default=0.0)
+        load_period = 0.0
+        if infer_total > 0.0:
+            load_period = infer_total / max(0.05, min(0.95, float(args.adaptive_target_load)))
+
+        input_period = self.rgb_rate.period
+        if input_period is None or input_period <= 0.0:
+            input_period = min_period
+
+        # Do not schedule faster than either the configured cap or the measured input cadence.
+        # Repeated-frame filtering still prevents duplicate inference when RGB stalls.
+        period = max(min_period, min(input_period, max_period), load_period)
+        period = float(np.clip(period, min_period, max_period))
+        return period
+
+    def compute_rgb_stale_timeout_locked(self) -> float:
+        base = float(self.args.rgb_exit_stale_sec)
+        if base <= 0.0:
+            return 0.0
+        if not self.args.adaptive_stale:
+            return base
+        p = self.rgb_rate.period
+        if p is None or p <= 0.0:
+            return base
+        dynamic = max(base, float(self.args.stale_period_mult) * p)
+        if self.args.max_stale_sec > 0.0:
+            dynamic = min(dynamic, float(self.args.max_stale_sec))
+        return dynamic
+
+    def timer_callback(self) -> None:
+        now = time.time()
+
+        with self.state_lock:
+            frame = self.latest_frame
+            next_due = self.next_infer_wall_time
+            if self.args.adaptive_rate:
+                if now < next_due:
+                    self.throttle_skip_count += 1
+                    self.last_skip_reason = "throttle"
+                    return
+
+        if not self.infer_lock.acquire(blocking=False):
+            with self.state_lock:
+                self.busy_skip_count += 1
+                self.last_skip_reason = "busy"
+            return
+
+        try:
+            with self.state_lock:
+                frame = self.latest_frame
+
+            if frame is None:
+                return
+
+            if not self.args.process_repeated and frame.stamp_key == self.last_processed_stamp_key:
+                with self.state_lock:
+                    self.repeat_skip_count += 1
+                    self.last_skip_reason = "repeat"
+                return
+
+            start = time.time()
+            try:
+                result = self.core.infer_rgb_array(frame.rgb)
+                end = time.time()
+
+                if self.debug_pub is not None and result.get("debug_rgb") is not None:
+                    self.publish_rgb_image(
+                        result["debug_rgb"],
+                        frame.stamp,
+                        frame.frame_id,
+                        self.debug_pub,
+                        encoding="rgb8",
+                    )
+
+                self.publish_mono_image(
+                    result["cost_map"],
+                    frame.stamp,
+                    frame.frame_id,
+                    self.cost_pub,
+                )
+
+                if self.raw_pub is not None:
+                    self.publish_mono_image(
+                        result["raw_prob_map"],
+                        frame.stamp,
+                        frame.frame_id,
+                        self.raw_pub,
+                    )
+
+                with self.state_lock:
+                    self.last_processed_stamp_key = frame.stamp_key
+                    self.infer_total_ewma.update(end - start)
+                    self.current_adaptive_period = self.compute_adaptive_period_locked()
+                    self.next_infer_wall_time = end + self.current_adaptive_period
+                    self.current_stale_timeout = self.compute_rgb_stale_timeout_locked()
+                    self.pub_count += 1
+                    self.last_pub_wall_time = end
+                    self.last_skip_reason = ""
+                    pub_count = self.pub_count
+                    adaptive_period = self.current_adaptive_period
+                    input_hz = self.rgb_rate.hz()
+
+                if pub_count % max(1, self.args.print_every) == 0:
+                    self.get_logger().info(
+                        "CLIPSeg updated "
+                        f"seq={frame.seq} "
+                        f"count={result['inference_count']} "
+                        f"infer={result['inference_time']:.3f}s "
+                        f"total={result['total_time']:.3f}s "
+                        f"input_hz={input_hz:.2f} "
+                        f"adaptive_hz={(1.0 / adaptive_period):.2f} "
+                        f"rgb_shape={result['rgb_shape']}"
+                    )
+
+            except Exception as e:
+                with self.state_lock:
+                    self.fail_count += 1
+                self.get_logger().warn(f"CLIPSeg inference failed: {e}")
+        finally:
+            self.infer_lock.release()
+
+    def heartbeat_callback(self) -> None:
+        now = time.time()
+        with self.state_lock:
+            rgb_age = now - self.last_rgb_wall_time if self.last_rgb_wall_time > 0 else -1.0
+            pub_age = now - self.last_pub_wall_time if self.last_pub_wall_time > 0 else -1.0
+            latest_seq = self.latest_frame.seq if self.latest_frame is not None else -1
+            latest_stamp = self.latest_frame.stamp_key if self.latest_frame is not None else None
+            rgb_count = self.rgb_count
+            pub_count = self.pub_count
+            fail_count = self.fail_count
+            decode_fail = self.decode_fail_count
+            busy_skip = self.busy_skip_count
+            repeat_skip = self.repeat_skip_count
+            throttle_skip = self.throttle_skip_count
+            cb_decode = self.last_callback_decode_time
+            input_hz = self.rgb_rate.hz()
+            infer_avg = self.infer_total_ewma.get(default=0.0)
+            adaptive_period = self.current_adaptive_period
+            stale_timeout = self.compute_rgb_stale_timeout_locked()
+            self.current_stale_timeout = stale_timeout
+            next_due_in = max(0.0, self.next_infer_wall_time - now)
+            last_skip_reason = self.last_skip_reason
+
+        adaptive_hz = 1.0 / adaptive_period if adaptive_period > 0.0 else 0.0
+        self.get_logger().info(
+            "HEARTBEAT clipseg "
+            f"rgb_count={rgb_count} "
+            f"pub_count={pub_count} "
+            f"fail_count={fail_count} "
+            f"decode_fail={decode_fail} "
+            f"busy_skip={busy_skip} "
+            f"repeat_skip={repeat_skip} "
+            f"throttle_skip={throttle_skip} "
+            f"latest_seq={latest_seq} "
+            f"latest_stamp={latest_stamp} "
+            f"last_rgb_age={rgb_age:.2f}s "
+            f"last_pub_age={pub_age:.2f}s "
+            f"input_hz={input_hz:.2f} "
+            f"adaptive_hz={adaptive_hz:.2f} "
+            f"infer_avg={infer_avg:.3f}s "
+            f"next_due={next_due_in:.2f}s "
+            f"stale_timeout={stale_timeout:.2f}s "
+            f"cb_decode={cb_decode:.4f}s "
+            f"infer_count={self.core.inference_count} "
+            f"last_infer={self.core.last_inference_time:.3f}s "
+            f"last_total={self.core.last_total_time:.3f}s "
+            f"skip_reason={last_skip_reason}"
+        )
+
+        if stale_timeout > 0.0 and rgb_count > 0 and rgb_age > stale_timeout:
+            self.get_logger().error(
+                f"RGB input stale for {rgb_age:.2f}s, timeout={stale_timeout:.2f}s. "
+                "Exiting clipseg process for supervisor restart."
+            )
+            os._exit(21)
+
+    @staticmethod
+    def publish_rgb_image(arr: np.ndarray, stamp, frame_id: str, pub, encoding: str = "rgb8") -> None:
+        h, w = arr.shape[:2]
+        out = Image()
+        out.header = Header()
+        out.header.stamp = stamp
+        out.header.frame_id = frame_id
+        out.height = int(h)
+        out.width = int(w)
+        out.encoding = encoding
+        out.is_bigendian = 0
+        out.step = int(w * 3)
+        out.data = np.asarray(arr, dtype=np.uint8, order="C").tobytes()
+        pub.publish(out)
+
+    @staticmethod
+    def publish_mono_image(arr: np.ndarray, stamp, frame_id: str, pub) -> None:
+        h, w = arr.shape[:2]
+        out = Image()
+        out.header = Header()
+        out.header.stamp = stamp
+        out.header.frame_id = frame_id
+        out.height = int(h)
+        out.width = int(w)
+        out.encoding = "mono8"
+        out.is_bigendian = 0
+        out.step = int(w)
+        out.data = np.asarray(arr, dtype=np.uint8, order="C").tobytes()
+        pub.publish(out)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Independent CLIPSeg cost-map publisher with adaptive safe-buffer handling.")
+
+    parser.add_argument("--rgb-topic", default="/gemini330/color/image_raw")
+    parser.add_argument("--output-topic", default="/clipseg_inference_image")
+    parser.add_argument("--cost-map-topic", default="/clipseg_cost_map")
+    parser.add_argument("--raw-prob-topic", default="/clipseg_raw_prob_image")
+    parser.add_argument("--publish-raw-prob-image", action="store_true", default=False)
+
+    parser.add_argument("--publish-debug-image", dest="publish_debug_image", action="store_true", default=True)
+    parser.add_argument("--disable-debug-image", dest="publish_debug_image", action="store_false")
+
+    parser.add_argument("--model-dir", default="/home/robot/ZyyPlanner/model/clipseg")
+    parser.add_argument(
+        "--prompts",
+        nargs="+",
+        default=["grass", "pavement", "vegetation", "stop gesture"],
+    )
+    parser.add_argument(
+        "--behavior-rule",
+        default="avoid_grass",
+        choices=["avoid_grass", "allow_grass", "prefer_pavement"],
+    )
+
+    parser.add_argument("--hz", type=float, default=0.5, help="Fixed rate when adaptive mode is off; initial nominal rate otherwise.")
+    parser.add_argument("--adaptive-rate", dest="adaptive_rate", action="store_true", default=True)
+    parser.add_argument("--no-adaptive-rate", dest="adaptive_rate", action="store_false")
+    parser.add_argument("--adaptive-min-hz", type=float, default=0.20)
+    parser.add_argument("--adaptive-max-hz", type=float, default=1.00)
+    parser.add_argument("--adaptive-max-period", type=float, default=8.0)
+    parser.add_argument("--adaptive-target-load", type=float, default=0.55)
+    parser.add_argument("--scheduler-tick-hz", type=float, default=10.0)
+    parser.add_argument("--rate-ewma-alpha", type=float, default=0.15)
+    parser.add_argument("--max-observed-period", type=float, default=30.0)
+
+    parser.add_argument("--input-width", type=int, default=160)
+    parser.add_argument("--confidence-threshold", type=float, default=0.05)
+    parser.add_argument("--debug-mode", choices=["raw", "cost"], default="raw")
+
+    parser.add_argument("--use-amp", dest="use_amp", action="store_true", default=True)
+    parser.add_argument("--no-amp", dest="use_amp", action="store_false")
+
+    parser.add_argument("--process-repeated", action="store_true", default=False)
+
+    parser.add_argument("--rgb-qos-depth", type=int, default=1)
+    parser.add_argument("--pub-qos-depth", type=int, default=1)
+    parser.add_argument("--rgb-exit-stale-sec", type=float, default=8.0)
+    parser.add_argument("--adaptive-stale", dest="adaptive_stale", action="store_true", default=True)
+    parser.add_argument("--no-adaptive-stale", dest="adaptive_stale", action="store_false")
+    parser.add_argument("--stale-period-mult", type=float, default=4.0)
+    parser.add_argument("--max-stale-sec", type=float, default=30.0)
+
+    parser.add_argument("--use-sim-time", dest="use_sim_time", action="store_true", default=False)
+    parser.add_argument("--no-sim-time", dest="use_sim_time", action="store_false")
+
+    parser.add_argument("--print-every", type=int, default=5)
+    parser.add_argument("--heartbeat-sec", type=float, default=2.0)
+    parser.add_argument("--executor-threads", type=int, default=3)
+
+    args, ros_args = parser.parse_known_args()
+    return args, ros_args
+
+
+def main():
+    args, ros_args = parse_args()
+
+    rclpy.init(args=ros_args)
+    node = ClipsegDebugNode(args)
+
+    try:
+        executor = MultiThreadedExecutor(num_threads=max(2, int(args.executor_threads)))
+        executor.add_node(node)
+        executor.spin()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except Exception:
+            pass
+
+
+if __name__ == "__main__":
+    main()
