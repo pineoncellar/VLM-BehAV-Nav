@@ -97,10 +97,11 @@ class LandmarkDetectorNode(Node):
         # ROS节点定义
         self.declare_parameter('rgb_topic', '/gemini330/color/image_raw')
         self.declare_parameter('depth_topic', '/gemini330/depth/image_raw')
+        self.declare_parameter('odom_topic', '/tita4264886/chassis/odometry')
         self.image_topic = self.get_parameter('rgb_topic').value
         self.depth_topic = self.get_parameter('depth_topic').value
         self.lidar_topic = "/tower/mapping/cloud_colored"
-        self.odom_topic = "/tita4264886/chassis/odometry"
+        self.odom_topic = self.get_parameter('odom_topic').value
         self.cmd_topic = "/cmd_vel"
         self.period_sec = 10.0
         self.control_period_sec = 0.1 # 10 Hz for control loop

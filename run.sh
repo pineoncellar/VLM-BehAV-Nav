@@ -25,10 +25,11 @@ export HTTP_PROXY="${HTTP_PROXY/socks:\/\//socks5://}"
 export HTTPS_PROXY="${HTTPS_PROXY/socks:\/\//socks5://}"
 export ALL_PROXY="${ALL_PROXY/socks:\/\//socks5://}"
 
-# 相机话题配置
+# 相机话题及传感器配置
 # 将话题名称结尾加上 /compressed 或 /compressedDepth，代码内的节点会自动识别并切换解码器使用压缩流
 CAMERA_RGB_TOPIC="/gemini330/color/image_raw/compressed"
 CAMERA_DEPTH_TOPIC="/gemini330/depth/image_raw/compressedDepth"
+ODOM_TOPIC="/tita4264886/chassis/odometry"
 
 pids=()
 cleanup() {
@@ -92,6 +93,7 @@ if [ "$LAUNCH_PLANNER" = "true" ]; then
 
     # 为了避免后台节点日志刷屏干扰前台输入，将输出重定向到 logs/ 对应子文件夹日志文件
     uv run python3 farplanner/far_waypoint_planner.py \
+      --odom-topic "${ODOM_TOPIC}" \
       --current-waypoint-local-topic /far/current_waypoint_local \
       --local-plan-topic /far/local_plan \
       --reference-path-topic /far/reference_path_local \
@@ -165,4 +167,5 @@ cd BeHav
 uv run python3 ros_interface.py \
     --ros-args \
     -p rgb_topic:="${CAMERA_RGB_TOPIC}" \
-    -p depth_topic:="${CAMERA_DEPTH_TOPIC}"
+    -p depth_topic:="${CAMERA_DEPTH_TOPIC}" \
+    -p odom_topic:="${ODOM_TOPIC}"
