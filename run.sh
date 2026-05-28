@@ -13,8 +13,17 @@ set -e
 DISABLE_CONTROL=true       # 设为 true 时，底层 MPC 仅规划不发 /cmd_vel 代码控制，用于安全调试小车
 LOG_CMD_VEL_ONLY=false       # 设为 true 时，系统不会真的发布/cmd_vel，而是将时间戳与对应的指令记录到日志文件中
 LAUNCH_PLANNER=true         # 是否在当前脚本中一同拉起 Planner 部分
-USE_FASTSAM=false            # 是否使用 FastSAM 独立显卡模型进行目标分割
+USE_FASTSAM=true            # 是否使用 FastSAM 独立显卡模型进行目标分割
 CLUSTER_GAP=0.8             # 深度连续性突变判定阈值 (米)
+
+
+# 修复 httpx 不支持 socks:// 前缀的问题 (OpenAI 客户端需要)
+export http_proxy="${http_proxy/socks:\/\//socks5://}"
+export https_proxy="${https_proxy/socks:\/\//socks5://}"
+export all_proxy="${all_proxy/socks:\/\//socks5://}"
+export HTTP_PROXY="${HTTP_PROXY/socks:\/\//socks5://}"
+export HTTPS_PROXY="${HTTPS_PROXY/socks:\/\//socks5://}"
+export ALL_PROXY="${ALL_PROXY/socks:\/\//socks5://}"
 
 # 相机话题配置
 # 将话题名称结尾加上 /compressed 或 /compressedDepth，代码内的节点会自动识别并切换解码器使用压缩流
