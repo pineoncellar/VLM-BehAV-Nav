@@ -6,10 +6,11 @@ import datetime
 import logging
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs.msg import Image, PointCloud2, CompressedImage
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
+import numpy as np
 
 # Import algorithms orchestration pipeline
 from main import BehavMainPipeline
@@ -108,14 +109,16 @@ class LandmarkDetectorNode(Node):
         self.bridge = CvBridge()
         
         # 1. Perception Interfaces
+        rgb_msg_type = CompressedImage if 'compressed' in self.image_topic else Image
         self.image_sub = self.create_subscription(
-            Image,
+            rgb_msg_type,
             self.image_topic,
             self.image_callback,
             1
         )
+        depth_msg_type = CompressedImage if 'compressed' in self.depth_topic else Image
         self.depth_sub = self.create_subscription(
-            Image,
+            depth_msg_type,
             self.depth_topic,
             self.depth_callback,
             1
@@ -155,30 +158,65 @@ class LandmarkDetectorNode(Node):
         self.latest_depth_image = None
         self.is_processing = False
 
-    def image_callback(self, msg: Image):
+    def image_callback(self, msg):
         self.dual_logger.debug('Received an image message')
         
         # 将原始 ros topic 数据发给 pipeline
         self.pipeline.update_sensor_data(image_msg=msg)
         
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
-            self.dual_logger.debug(f"Image converted successfully, shape: {cv_image.shape}")
-            if msg.encoding == 'rgb8':
-                cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
-            elif msg.encoding == 'bgr8':
-                pass
-            elif len(cv_image.shape) == 2:
-                cv_image = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
+            if hasattr(msg, 'format'):  # CompressedImage
+                cv_image = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
+                if len(cv_image.shape) == 2:
+                    cv_image = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
+                else:
+                    # compressed_imgmsg_to_cv2 默认通常转出 bgr8
+                    pass
+            else:  # Raw Image
+                cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+                self.dual_logger.debug(f"Image converted successfully, shape: {cv_image.shape}")
+                if msg.encoding == 'rgb8':
+                    cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
+                elif msg.encoding == 'bgr8':
+                    pass
+                elif len(cv_image.shape) == 2:
+                    cv_image = cv2.cvtColor(cv_image, cv2.COLOR_GRAY2BGR)
             self.latest_image = cv_image
         except CvBridgeError as e:
             self.dual_logger.error(f'cv_bridge error: {str(e)}')
 
-    def depth_callback(self, msg: Image):
+    def depth_callback(self, msg):
         try:
-            # depth images from gazebo are often 32FC1
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
-            self.latest_depth_image = cv_image
+            if hasattr(msg, 'format'):  # CompressedImage
+                # 对于 Depth 通常是 16UC1压缩，ROS 中部分相机的 compressedDepth 包含 12 个字节的自定义头部
+                format_str = msg.format.lower()
+                
+                # 尝试用标准 cv_bridge 解码
+                cv_image = None
+                try:
+                    cv_image = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
+                except Exception as e:
+                    pass
+
+                if cv_image is None:
+                    # 如果标准解码失败，很可能是 RViz / Realsense 的带头部 compressedDepth
+                    # 跳过前 12 字节头部，直接用 cv2.imdecode 解码后面真实的 png/tiff 数据
+                    raw_data = np.frombuffer(msg.data, np.uint8)[12:]
+                    cv_image = cv2.imdecode(raw_data, cv2.IMREAD_UNCHANGED)
+
+                if cv_image is not None:
+                    # 统一转换为米制的 32FC1 以适配现有管道
+                    if cv_image.dtype == np.uint16:
+                        cv_image = cv_image.astype(np.float32) / 1000.0
+                    elif cv_image.dtype == np.float64:
+                        cv_image = cv_image.astype(np.float32)
+                    self.latest_depth_image = cv_image
+                else:
+                    self.dual_logger.error("Failed to decode compressed depth image.")
+            else:
+                # depth images from gazebo are often 32FC1
+                cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
+                self.latest_depth_image = cv_image
         except CvBridgeError as e:
             self.dual_logger.error(f'cv_bridge depth error: {str(e)}')
 
