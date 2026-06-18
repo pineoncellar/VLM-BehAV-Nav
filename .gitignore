@@ -15,11 +15,13 @@ BeHav/.env
 BeHav/FastSAM-x.pt
 
 # 排除BeHav/scripts文件夹下，子文件中的文件
-BeHav/scripts/*
-!BeHav/scripts/*.py
+BeHav/script/*
+!BeHav/script/*.py
 
 backup/*
 
 # 排除tracker中的输出文件与多余的输入文件
 tracker/output/*
 tracker/input/*
+
+vedio/*
