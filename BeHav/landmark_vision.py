@@ -534,11 +534,20 @@ class LandmarkDetectorCore:
         try:
             data = json.loads(cleaned)
             result["visible"] = bool(data.get("visible", False))
-            result["x_min"] = data.get("x_min", None)
-            result["y_min"] = data.get("y_min", None)
-            result["x_max"] = data.get("x_max", None)
-            result["y_max"] = data.get("y_max", None)
-            result["distance_m"] = data.get("distance_m", None)
+            
+            def extract_val(val):
+                while isinstance(val, list):
+                    if len(val) > 0:
+                        val = val[0]
+                    else:
+                        val = None
+                return val
+
+            result["x_min"] = extract_val(data.get("x_min", None))
+            result["y_min"] = extract_val(data.get("y_min", None))
+            result["x_max"] = extract_val(data.get("x_max", None))
+            result["y_max"] = extract_val(data.get("y_max", None))
+            result["distance_m"] = extract_val(data.get("distance_m", None))
             return result
         except Exception:
             pass
@@ -633,17 +642,25 @@ class LandmarkDetectorCore:
         h, w = image_rgb.shape[:2]
 
         # 从 1000x1000 的归一化坐标系转换回原图的像素坐标
-        x_min_px = int(parsed["x_min"] * w / 1000.0)
-        y_min_px = int(parsed["y_min"] * h / 1000.0)
-        x_max_px = int(parsed["x_max"] * w / 1000.0)
-        y_max_px = int(parsed["y_max"] * h / 1000.0)
+        try:
+            x_min_px = int(float(parsed["x_min"]) * w / 1000.0)
+            y_min_px = int(float(parsed["y_min"]) * h / 1000.0)
+            x_max_px = int(float(parsed["x_max"]) * w / 1000.0)
+            y_max_px = int(float(parsed["y_max"]) * h / 1000.0)
+        except (ValueError, TypeError):
+            self.logger.error(f"[LandmarkDetector] target bounding box has invalid type/value: {parsed}")
+            if self.on_vision_image is not None:
+                self.on_vision_image(self.add_status_banner(base_img_for_banner, f"[Target '{target_text}' bbox error]"))
+            self.apply_blind_action()
+            if self.latest_measurement:
+                self.maybe_advance_to_next_landmark(self.latest_measurement[0])
+            return
 
         x_min = max(0, min(w - 1, x_min_px))
         y_min = max(0, min(h - 1, y_min_px))
         x_max = max(0, min(w - 1, x_max_px))
         y_max = max(0, min(h - 1, y_max_px))
 
-        # 防止框顺序颠倒
         if x_min > x_max:
             x_min, x_max = x_max, x_min
         if y_min > y_max:
