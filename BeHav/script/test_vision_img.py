@@ -117,7 +117,9 @@ def main():
         target_text = detector.current_target_text()
         logger.info(f"Querying VLM for target: {target_text}")
         response_text = detector.query_target_bbox_and_distance(rgb_img, target_text)
+        logger.info(f"VLM Response: {response_text}")
         parsed = detector.parse_vlm_response(response_text)
+        logger.info(f"Parsed BBox: {parsed}")
         
         img_c = None
         img_d = None
@@ -128,22 +130,25 @@ def main():
         centroid = None
         
         # c) FastSAM 全图掩膜
-        logger.info("Generating Full FastSAM Masks...")
-        results_all = detector.fastsam_model(rgb_img, device=detector.device, retina_masks=True, conf=0.4, iou=0.9, verbose=False)
         img_c = img_a.copy()
-        if results_all and results_all[0].masks:
-            masks_all = results_all[0].masks.data.cpu().numpy()
-            for m in masks_all:
-                m_resized = cv2.resize(m.astype(np.uint8), (img_a.shape[1], img_a.shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
-                color = np.random.randint(0, 255, 3).tolist()
-                img_c[m_resized] = img_c[m_resized] * 0.5 + np.array(color) * 0.5
+        if getattr(detector, 'use_fastsam', False) and hasattr(detector, 'fastsam_model'):
+            logger.info("Generating Full FastSAM Masks...")
+            results_all = detector.fastsam_model(rgb_img, device=detector.device, retina_masks=True, conf=0.4, iou=0.9, verbose=False)
+            if results_all and results_all[0].masks:
+                masks_all = results_all[0].masks.data.cpu().numpy()
+                for m in masks_all:
+                    m_resized = cv2.resize(m.astype(np.uint8), (img_a.shape[1], img_a.shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
+                    color = np.random.randint(0, 255, 3).tolist()
+                    img_c[m_resized] = img_c[m_resized] * 0.5 + np.array(color) * 0.5
+        else:
+            logger.info("FastSAM not enabled or fastsam_model not found, skipping full mask generation.")
 
         if parsed.get("visible"):
             h, w = img_a.shape[:2]
-            x_min = max(0, min(w - 1, int(parsed["x_min"] * w / 1000.0)))
-            y_min = max(0, min(h - 1, int(parsed["y_min"] * h / 1000.0)))
-            x_max = max(0, min(w - 1, int(parsed["x_max"] * w / 1000.0)))
-            y_max = max(0, min(h - 1, int(parsed["y_max"] * h / 1000.0)))
+            x_min = max(0, min(w - 1, int(parsed["x_min"])))
+            y_min = max(0, min(h - 1, int(parsed["y_min"])))
+            x_max = max(0, min(w - 1, int(parsed["x_max"])))
+            y_max = max(0, min(h - 1, int(parsed["y_max"])))
             
             if x_min > x_max: x_min, x_max = x_max, x_min
             if y_min > y_max: y_min, y_max = y_max, y_min
@@ -151,7 +156,10 @@ def main():
             bbox = [x_min, y_min, x_max, y_max]
             
             # Distance and Target Mask (d, e, f)
-            real_distance, mask, centroid = detector.calculate_physical_distance(bbox, rgb_img, depth_img)
+            if getattr(detector, 'use_fastsam', False):
+                real_distance, mask, centroid = detector.calculate_physical_distance(bbox, rgb_img, depth_img)
+            else:
+                real_distance, mask, centroid = detector.calculate_physical_distance_histogram(bbox, depth_img)
             
             # d) 目标切片二值掩膜
             if mask is not None:
